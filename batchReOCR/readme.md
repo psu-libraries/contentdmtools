@@ -24,4 +24,4 @@ Starting with files or metadata can be a bit of a chicken and egg problem. Somet
 5. Index the collection in the CONTENTdm Admin UI. 
 6. Unlock all the items in the CONTENTdm Admin UI.
 
-*This can take some wrangling and sometimes a bit of command line magic can help. Using the CONTENTdm API can be helpful for determining the IDs contained within a Compound Object; e.g. https://digital.libraries.psu.edu/digital/bl/dmwebservices/index.php?q=dmGetCompoundObjectInfo/pageol/3862/json. While JSON is ouputed, it can be [converted to CSV](http://www.convertcsv.com/json-to-csv.htm).  See Nathan for assistance.
+*This can take some wrangling and sometimes a bit of command line magic can help. Using the CONTENTdm API can be helpful for determining the IDs contained within a Compound Object; e.g. https://digital.libraries.psu.edu/digital/bl/dmwebservices/index.php?q=dmGetCompoundObjectInfo/pageol/3862/json. While JSON is ouputed, it can be [converted to CSV](https://json-csv.com/).  See Nathan for assistance.
