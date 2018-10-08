@@ -10,4 +10,4 @@ Run `.\batchEdit.ps1 -alias collecitonAlias` to kick off the script. The data ta
 #### WARNINGS
   * **Controlled vocabularies and required fields (other than title) must be turned off before pitching metadata to catcher**. Make note of the settings and turn them back on after done batch editing.
   * **Field names used as headers are not the same as the field name labels in CONTENTdm**. Look at the `CISONICK` value in the Field Properties in the Admin Gui for the correct field name to use as the CSV header.
-  * You may have to create a `logs` subdirectory in your home directory for pitcher to work correctly. This seems to be a bug as no files are created in the directory, they are created in the directory you work from.
+  * **Log directories need to be created** or pitcher will throw an error. You may have to create `logs` subdirectories in **both** your home directory and the active directory the `batchEdit.ps1` script is running from, if it does not already exist.
