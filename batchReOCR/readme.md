@@ -4,7 +4,9 @@ ABBYY Recognition Server, used in workflows for building new digital collections
 
 This process is both manual and automated. It may be easier to batch for large collections.
 
-**Caveat: OCR is only as good as the files. If the original files are poor quality or low-resolution, rerunning may not show many improvements to the OCR quality (or none).**
+**Caveats:** 
+  * OCR is only as good as the files. If the original files are poor quality or low-resolution, rerunning may not show many improvements to the OCR quality (or none).
+  * Line breaks are removed from the OCRed text before it's added to the CSV because they tend to cause problems.
 
 Starting with files or metadata can be a bit of a chicken and egg problem. Sometimes, it's very easy to tell how the metadata relates to the files we have stored on Isilon, othertimes it is very difficult to match them and is actually easier to pull the files from old self-hosted CONTENTdm files. If you do this, don't be surprised if the filename and ID almost, but don't quite match.*
 
