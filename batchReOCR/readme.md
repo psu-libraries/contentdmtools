@@ -20,7 +20,7 @@ Starting with files or metadata can be a bit of a chicken and egg problem. Somet
     * `action`: Should always equal `edit`.
     * `file` : Relative path to the text file. E.g. `text\file.txt`.
 3. On a Windows computer, in PowerShell, run `.\batchReOCR.ps1`. This will create a `|` delimited text file in your project folder called `metadata_pitcher_pipe.txt`. Open Excel or another spreadsheet program and import this data. Check the spreadsheet to see if any files were missed or if any fields need to be recopied. (Sometimes `collection` and `action` need to be copied down again.) If you do not have any files with OCR text, delete them from the spreadsheet -- do not leave any rows with blank `value` fields or they will be wiped out when updating CONTENTdm. Once everything is set, delete the `file` column and save the file as `metadata.csv`.
-4. Run `pitcher --csv metadata.csv --settings settings.yml`.
+4. Run `pitcher --csv metadata.csv --settings settings.yml`. There are some dependencies if you haven't used Pitcher before, see [Batch Editing](https://git.psu.edu/digipres/contentdm/tree/master/batchEdit)
 5. Index the collection in the CONTENTdm Admin UI. 
 6. Unlock all the items in the CONTENTdm Admin UI.
 
