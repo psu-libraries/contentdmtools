@@ -2,7 +2,7 @@
 The `batchEdit.ps1` script can be used to process `metadata.csv`, **include changed values only**, into a csv of change records that can be fed into [CONTENTdm Catcher](https://www.oclc.org/support/services/contentdm/help/add-ons-help/contentdm-catcher.en.html) via [Pitcher](https://github.com/little9/pitcher). If successfully loaded from catcher, they need to be indexed in the Administrative GUI.
 
 ### Ruby and Pitcher
-You will need to have [ruby installed](https://rubyinstaller.org/downloads/) and the [pitcher gem installed](https://github.com/little9/pitcher). You will need to have a `settings.yml` file in the same directory as `batchEdit.ps1`. A sample is in this repository, add your credentials.
+You will need to have [ruby installed](https://rubyinstaller.org/downloads/) and the [pitcher gem installed](https://github.com/little9/pitcher). You will need to have a `settings.yml` file in the same directory as `batchEdit.ps1`. A sample is in this repository, see Nathan Tallman (or CDM admin notebook) for the password to the `psucdmcatcher` worldcat user. You can use your own user credentials, however, be warned the logs will contain your password in plaintext.
 
 ### Usage
 Run `.\batchEdit.ps1 -alias collecitonAlias` to kick off the script. The data table of metadata changes should be in the in the same directory as the script and named `metadata.csv`.
