@@ -20,7 +20,15 @@ with the correct switches, the script can also:
 2. Within this directory, create subdirectories for each compound object and copy TIF files for each object.
     * Best practice is to use the digital object identifier for the subdirectory name.
 3. Save metadata for all compound objects in the batch as a tab-delimited text file named `metadata.txt`.
-    * Metadata may first be created using the Excel template and converted to a tab-delimited text file. Before converting, please make the following adjustments.
+    * Metadata may first be created using the Excel template and converted to a tab-delimited text file. 
+    * To easily add filenames to Excel
+       * Open a compound object subdirectory in Windows Explorer and view it as a list
+       * Select all files and right-click while holding down the shift key
+       * Choose `Copy as path`
+       * In a new Excel sheet, click into the A1 cell and paste in the file paths
+       * From the Data ribbon, use Text to Columns in the Data Tools section to split the cells (use a custom delimiter `\`) and the filenames should be in the last cell on the right
+       * After pasting the filenames into the master sheet for all compound objects, delete the extra sheet, you should have only one sheet before you save as a tab-delimited text file.
+    * Before converting, please make the following adjustments.
        * Move `File Name` to penultimate field
        * Move `Directory` to last field
        * Delete the `Level` field
