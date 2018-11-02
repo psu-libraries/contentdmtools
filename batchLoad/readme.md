@@ -2,16 +2,16 @@
 
 For batch-loading like compound objects into CONTENTdm, University Libraries uses the [Directory Structure](https://www.oclc.org/support/services/contentdm/help/compound-objects-help/adding-multiple-compound-objects/directory-structure.en.html) specification. When loading batches of compound objects, they must all be the same type of compound object: document or monograph (2-levels only). If both types are used in a collection, they will have to be uploaded in separate batches. This script uses PowerShell and is designed to run in Windows workstations.
 
-This script will take: 
-  * a directory containing subdirectories for each compound object, each containing TIF images
-  * a master metadata file in tab-delimited text format called `metadata.txt`
+This script will take
+  * a directory containing subdirectories for each compound object, each containing TIF images,
+  * a master metadata file in tab-delimited text format called `metadata.txt`,
 
-and process out:
+and process out
 
   * individual tab-delimited text format metadata files, saved in the appropriate compound object subdirectory
 
-with the correct switches, the script can also:
-  * run the TIF images through ABBYY Recognition Server to generate TXT and JP2 derivatives and save them in the correct compound object subdirectory for Project Client
+with the correct switches, the script can also
+  * run the TIF images through ABBYY Recognition Server to generate TXT and JP2 derivatives and save them in the correct compound object subdirectory for Project Client, and
   * delete the TIF images from the upload package.
 
 ## Usage
@@ -43,7 +43,7 @@ with the correct switches, the script can also:
       * To also delete TIFs `.\batchLoadCreate.ps1 -im -deltif`
       * Note, this will not generate text transcripts.
 
-## Adding batch to CONTENTdm
+### Adding batches to CONTENTdm
 
 1. Open CONTENTdm Project Client and open a project pre-configured for the collection to which you are uploading.
 2. Add Compound Objects, choose the Directory Structure and click Add.
@@ -67,5 +67,15 @@ The CONTENTdm packging script requires [ImageMagick for Windows](https://www.ima
 ### PowerShell Execution Policy
 To run Powershell scripts, you need to first run a command to allow them. To do this, you will need to open Powershell with Privilege Guard and run the following command: `Set-ExecutionPolicy RemoteSigned`.
 
-## ToDo
+## Metadata and Batch Examples
+
+  * [batchLoad_metadataExample]()
+     * This metadata Excel spreadsheet shows the three extra columns (Level, Directory, and File Name) used in this process. The rest of the columns are determined the collection fields and may not match this example. If all the records are blank for a particular column, it may be deleted before being converted to a tab-delimited text file.
+  * [batchLoad-preProcessingExample.zip]()
+       * Shows the TIF images organized into subdirectories by compound object and the master Excel metadata spreadsheet before being saved as a tab-delimited text file.
+  * [batchLoad-postProcessingExample.zip]()
+       * Shows the master metadata in tab-delimited text format with subdirectories by compound object. Each subdirectory contains a metadata for the object and items in tab-delimited text format and two additional subdirectories: `scans` and `transcripts`. Scans includes JP2 files and transcripts includes TXT files.
+
+## To Do
   - [ ] Hierarchical Monograph Compound Objects
+  - [ ] Refactor to use the identifier field and get rid of the directory field
