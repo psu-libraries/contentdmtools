@@ -56,5 +56,8 @@ This script expects users to have the ABBYY Recognition server storage mapped to
 
 The CONTENTdm packging script requires [ImageMagick for Windows](https://www.imagemagick.org/script/download.php#windows) to be installed if you plan to convert TIF images to JP2.
 
+### PowerShell Execution Policy
+To run Powershell scripts, you need to first run a command to allow them. To do this, you will need to open Powershell with Privilege Guard and run the following command: `Set-ExecutionPolicy RemoteSigned`.
+
 ## ToDo
   - [ ] Hierarchical Monograph Compound Objects
