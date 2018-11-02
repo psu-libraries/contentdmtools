@@ -52,11 +52,11 @@ with the correct switches, the script can also
 8. Upload, approve, and index to add the compound objects to the collection.
 
 ### Metadata and Batch Examples
-  * [batchLoad_metadataExample]()
+  * [batchLoad_metadataExample](https://psu.box.com/s/zuulqnvhd7d11xqs8j586403zrycy5sv)
      * This metadata Excel spreadsheet shows the three extra columns (Level, Directory, and File Name) used in this process. The rest of the columns are determined the collection fields and may not match this example. If all the records are blank for a particular column, it may be deleted before being converted to a tab-delimited text file.
-  * [batchLoad-preProcessingExample.zip]()
+  * [batchLoad-preProcessingExample.zip](https://psu.box.com/s/f8o8g9zhek5p09oam2hq0fpmyilse9vz)
        * Shows the TIF images organized into subdirectories by compound object and the master Excel metadata spreadsheet before being saved as a tab-delimited text file.
-  * [batchLoad-postProcessingExample.zip]()
+  * [batchLoad-postProcessingExample.zip](https://psu.box.com/s/y8hfouij1ueh2tyyhsl74995zjhbow0k)
        * Shows the master metadata in tab-delimited text format with subdirectories by compound object. Each subdirectory contains a metadata for the object and items in tab-delimited text format and two additional subdirectories: `scans` and `transcripts`. Scans includes JP2 files and transcripts includes TXT files.
 
 ## Dependencies
