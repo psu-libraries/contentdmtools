@@ -1,5 +1,4 @@
 # Creating Batch Loads for CONTENTdm
-
 For batch-loading like compound objects into CONTENTdm, University Libraries uses the [Directory Structure](https://www.oclc.org/support/services/contentdm/help/compound-objects-help/adding-multiple-compound-objects/directory-structure.en.html) specification. When loading batches of compound objects, they must all be the same type of compound object: document or monograph (2-levels only). If both types are used in a collection, they will have to be uploaded in separate batches. This script uses PowerShell and is designed to run in Windows workstations.
 
 This script will take
@@ -15,7 +14,6 @@ with the correct switches, the script can also
   * delete the TIF images from the upload package.
 
 ## Usage
-
 1. Create a directory to stage your batch of compound objects for CONTENTdm.
 2. Within this directory, create subdirectories for each compound object and copy TIF files for each object.
     * Best practice is to use the digital object identifier for the subdirectory name.
@@ -44,7 +42,6 @@ with the correct switches, the script can also
       * Note, this will not generate text transcripts.
 
 ### Adding batches to CONTENTdm
-
 1. Open CONTENTdm Project Client and open a project pre-configured for the collection to which you are uploading.
 2. Add Compound Objects, choose the Directory Structure and click Add.
 3. Choose the compound object type from the drop down and select the directory containing the batch.
@@ -54,27 +51,23 @@ with the correct switches, the script can also
 7. Always check the field mappings. Most of the initial fields should be in order, the later fields, starting with Notes may be misaligned and need re-mapping. For File Name and Directory, choose None.
 8. Upload, approve, and index to add the compound objects to the collection.
 
-## Dependencies
-
-### ABBYY Recognition Server
-
-This script expects users to have the ABBYY Recognition server storage mapped to their `O:` drive.
-
-### ImageMagick
-
-The CONTENTdm packging script requires [ImageMagick for Windows](https://www.imagemagick.org/script/download.php#windows) to be installed if you plan to convert TIF images to JP2.
-
-### PowerShell Execution Policy
-To run Powershell scripts, you need to first run a command to allow them. To do this, you will need to open Powershell with Privilege Guard and run the following command: `Set-ExecutionPolicy RemoteSigned`.
-
-## Metadata and Batch Examples
-
+### Metadata and Batch Examples
   * [batchLoad_metadataExample]()
      * This metadata Excel spreadsheet shows the three extra columns (Level, Directory, and File Name) used in this process. The rest of the columns are determined the collection fields and may not match this example. If all the records are blank for a particular column, it may be deleted before being converted to a tab-delimited text file.
   * [batchLoad-preProcessingExample.zip]()
        * Shows the TIF images organized into subdirectories by compound object and the master Excel metadata spreadsheet before being saved as a tab-delimited text file.
   * [batchLoad-postProcessingExample.zip]()
        * Shows the master metadata in tab-delimited text format with subdirectories by compound object. Each subdirectory contains a metadata for the object and items in tab-delimited text format and two additional subdirectories: `scans` and `transcripts`. Scans includes JP2 files and transcripts includes TXT files.
+
+## Dependencies
+### PowerShell Execution Policy
+To run Powershell scripts, you need to first run a command to allow them. To do this, you will need to open Powershell with Privilege Guard and run the following command: `Set-ExecutionPolicy RemoteSigned`.
+
+### ABBYY Recognition Server
+This script expects users to have the ABBYY Recognition Server storage share mapped to the `O:` drive. The network path for the storage share is `l5abby01.psul.psu.edu\Abbyy_OCR`. Contact [Beth Rea](mailto:baz5008@psu.edu) if you need authorization to access the share.
+
+### ImageMagick
+If choosing to convert TIF to JP2 using ImageMagick instead of ABBYY, [ImageMagick for Windows](https://www.imagemagick.org/script/download.php#windows) must be installed on the workstation.
 
 ## To Do
   - [ ] Hierarchical Monograph Compound Objects
