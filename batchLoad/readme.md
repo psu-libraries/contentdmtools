@@ -64,7 +64,7 @@ with the correct switches, the script can also
 To run Powershell scripts, you need to first run a command to allow them. To do this, you will need to open Powershell with Privilege Guard and run the following command: `Set-ExecutionPolicy RemoteSigned`.
 
 ### ABBYY Recognition Server
-This script expects users to have the ABBYY Recognition Server storage share mapped to the `O:` drive. The network path for the storage share is `l5abby01.psul.psu.edu\Abbyy_OCR`. Contact [Beth Rea](mailto:baz5008@psu.edu) if you need authorization to access the share.
+This script expects users to have the ABBYY Recognition Server storage share mapped to the `O:` drive. The network path for the storage share is `l5abbyy01.psul.psu.edu\Abbyy_OCR`. Contact [Beth Rea](mailto:baz5008@psu.edu) if you need authorization to access the share.
 
 ### ImageMagick
 If choosing to convert TIF to JP2 using ImageMagick instead of ABBYY, [ImageMagick for Windows](https://www.imagemagick.org/script/download.php#windows) must be installed on the workstation.
