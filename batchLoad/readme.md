@@ -69,6 +69,9 @@ This script expects users to have the ABBYY Recognition Server storage share map
 ### ImageMagick
 If choosing to convert TIF to JP2 using ImageMagick instead of ABBYY, [ImageMagick for Windows](https://www.imagemagick.org/script/download.php#windows) must be installed on the workstation.
 
+### UTF-8 Encoding
+When ever the end product is intended for digital collections, please ensure that [character encoding is set to UTF-8 when you are working with tabular data, whether in Excel, OpenOffice, or LibreOffice](https://psu.box.com/s/v9glyv724f9g3d1ko2wz6on8l76jiybq).
+
 ## To Do
   - [ ] Hierarchical Monograph Compound Objects
   - [ ] Refactor to use the identifier field and get rid of the directory field
