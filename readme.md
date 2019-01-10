@@ -5,4 +5,4 @@
   * [Batch re-OCRing items](https://git.psu.edu/digipres/contentdm/tree/master/batchReOCR)
 
 ## PowerShell Scripts
-To run Powershell scripts, you need to first run a command to allow them. To do this, you will need to open Powershell with Privilege Guard and run the following command: `Set-ExecutionPolicy RemoteSigned`.
+To run Powershell scripts, you need to first run a command to allow them. To do this, you will need to open Powershell with Privilege Guard and run the following command: `Set-ExecutionPolicy Unrestricted`.
