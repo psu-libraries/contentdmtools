@@ -9,4 +9,4 @@ To run Powershell scripts, you need to first run a command to allow them. To do 
 
 # Customizations
 
-Tracking for custom files, scripts, and other localizations for hosted CONTENTdm at [https://digital.libraries.psu.edu/](https://digital.libraries.psu.edu/).
+The [customizations directory](https://git.psu.edu/digipres/contentdm/tree/master/customizations) is for tracking for custom files, scripts, and other localizations for hosted CONTENTdm at [https://digital.libraries.psu.edu/](https://digital.libraries.psu.edu/).
