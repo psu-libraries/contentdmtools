@@ -66,7 +66,11 @@ document.addEventListener('cdm-item-page:ready', changeLogoLink);
 document.addEventListener('cdm-custom-page:ready', changeLogoLink);
 })();
 
-// Matomo Tracker
+
+// Matomo analytics, added by Nathan Tallman, 2019-03-14
+(function () {
+  'use strict';
+function pageView() {
   var _paq = _paq || [];
   _paq.push(['trackPageView']);
   _paq.push(['enableLinkTracking']);
@@ -77,3 +81,15 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
     var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
     g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
   })();
+}
+document.addEventListener('cdm-home-page:ready', pageView);
+document.addEventListener('cdm-about-page:ready', pageView);
+document.addEventListener('cdm-login-page:ready', pageView);
+document.addEventListener('cdm-search-page:ready', pageView);
+document.addEventListener('cdm-collection-landing-page:ready', pageView);
+document.addEventListener('cdm-collection-search-page:ready', pageView);
+document.addEventListener('cdm-advanced-search-page:ready', pageView);
+document.addEventListener('cdm-item-page:ready', pageView);
+document.addEventListener('cdm-custom-page:ready', pageView);
+document.addEventListener('cdm-notfound-page:ready', pageView);
+})();
