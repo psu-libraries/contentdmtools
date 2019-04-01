@@ -28,7 +28,7 @@ if($abbyy)
   $count_staged = 0
   $count_processed = 0
   $user = $env:USERNAME
-  $abbyyStage = "O:\pcd\contentdm_withText\$user\$batch"
+  $abbyyStage = "O:\pcd\contentdm_withText\staging\$user\$batch"
   $abbyyInput = "O:\pcd\contentdm_withText\input\"
   $abbyyOutput = "O:\pcd\contentdm_withText\output\$batch"
 
