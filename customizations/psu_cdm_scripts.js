@@ -66,6 +66,27 @@ document.addEventListener('cdm-item-page:ready', changeLogoLink);
 document.addEventListener('cdm-custom-page:ready', changeLogoLink);
 })();
 
+// Enable grid view for visual resource collections.
+// Added by Nathan Tallman, 2019-04-01
+(function () {
+  'use strict';
+
+  function gridClick(){
+    document.querySelector('button[value="Grid View"]').click();
+  }
+
+  document.addEventListener('cdm-search-page:ready', function(e) {
+    if ((e.detail.collectionId === 'arthist2') || (e.detail.collectionId === 'palmer')) {
+      gridClick();
+    }
+  });
+  document.addEventListener('cdm-collection-search-page:ready', function(e) {
+    if ((e.detail.collectionId === 'arthist2') || (e.detail.collectionId === 'palmer')) {
+      gridClick();
+    }
+  });
+})();
+
 
 // Matomo analytics, added by Nathan Tallman, 2019-03-14
 (function () {
