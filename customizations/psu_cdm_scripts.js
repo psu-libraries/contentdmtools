@@ -10,7 +10,7 @@ function libchat()   {
       script.src= '//v2.libanswers.com/load_chat.php?hash=d51e38627705fc23934afaba4f563cc8';
       head.appendChild(script);
 	   }
-	
+
 document.addEventListener('cdm-home-page:ready', libchat);
 document.addEventListener('cdm-about-page:ready', libchat);
 document.addEventListener('cdm-login-page:ready', libchat);
@@ -67,7 +67,7 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
 })();
 
 // Enable grid view for visual resource collections.
-// Added by Nathan Tallman, 2019-04-01
+// Added by Nathan Tallman, 2019-04-01; updated, 2019-04-03
 (function () {
   'use strict';
 
@@ -76,12 +76,12 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
   }
 
   document.addEventListener('cdm-search-page:ready', function(e) {
-    if ((e.detail.collectionId === 'arthist2') || (e.detail.collectionId === 'palmer')) {
+    if ((e.detail.collectionId === 'arthist2') || (e.detail.collectionId === 'palmer') || (e.detail.collectionId === 'wwbldgs')) {
       gridClick();
     }
   });
   document.addEventListener('cdm-collection-search-page:ready', function(e) {
-    if ((e.detail.collectionId === 'arthist2') || (e.detail.collectionId === 'palmer')) {
+    if ((e.detail.collectionId === 'arthist2') || (e.detail.collectionId === 'palmer') || (e.detail.collectionId === 'wwbldgs')) {
       gridClick();
     }
   });
