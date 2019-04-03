@@ -1,5 +1,17 @@
 // JavaScript Document
 
+// Matomo analytics, added by Nathan Tallman, January 2019
+var _paq = _paq || [];
+ _paq.push(['trackPageView']);
+ _paq.push(['enableLinkTracking']);
+ (function() {
+   var u="https://analytics.libraries.psu.edu/matomo/";
+   _paq.push(['setTrackerUrl', u+'piwik.php']);
+   _paq.push(['setSiteId', '3']);
+   var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+   g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+ })();
+
 // Global PSU Footer code, added by Karen Schwentner.
 (function () {
   'use strict';
@@ -85,32 +97,4 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
       gridClick();
     }
   });
-})();
-
-
-// Matomo analytics, added by Nathan Tallman, 2019-03-14
-(function () {
-  'use strict';
-function pageView() {
-  var _paq = _paq || [];
-  _paq.push(['trackPageView']);
-  _paq.push(['enableLinkTracking']);
-  (function() {
-    var u="https://analytics.libraries.psu.edu/matomo/";
-    _paq.push(['setTrackerUrl', u+'piwik.php']);
-    _paq.push(['setSiteId', '3']);
-    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-    g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
-  })();
-}
-document.addEventListener('cdm-home-page:ready', pageView);
-document.addEventListener('cdm-about-page:ready', pageView);
-document.addEventListener('cdm-login-page:ready', pageView);
-document.addEventListener('cdm-search-page:ready', pageView);
-document.addEventListener('cdm-collection-landing-page:ready', pageView);
-document.addEventListener('cdm-collection-search-page:ready', pageView);
-document.addEventListener('cdm-advanced-search-page:ready', pageView);
-document.addEventListener('cdm-item-page:ready', pageView);
-document.addEventListener('cdm-custom-page:ready', pageView);
-document.addEventListener('cdm-notfound-page:ready', pageView);
 })();
