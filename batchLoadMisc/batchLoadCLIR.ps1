@@ -18,7 +18,7 @@ Write-Output "$(Get-Timestamp) CLIR CONTENTdm Prep Starting." | Tee-Object -file
 $metadata = Import-Csv -Delimiter "`t" -Path metadata.txt 
 $directories = $metadata | Group-Object -AsHashTable -AsString -Property Directory
 
-# Establish loop for each object directory
+# Establish loop for each object directory 
 ForEach ($directory in $directories.keys)
 {
   # Create object metadata txt in each object directory
@@ -26,6 +26,19 @@ ForEach ($directory in $directories.keys)
   $directories.$directory |Export-Csv -Delimiter "`t" -Path $directory\$directory.txt -NoTypeInformation  | Tee-Object -file $log -Append
   Write-Output "    $(Get-Timestamp) Object metadata has been broken up into the the Directory Structure." | Tee-Object -file $log -Append
 
+  # split object PDFs and move complete PDF to tmp directory
+  pdftk $directory\$directory.pdf burst output $directory\$directory-%02d.pdf | Tee-Object -file $log -Append
+  # Remove-Item $directory\$directory.pdf | Tee-Object -file $log -Append
+  Remove-Item $directory\doc_data.txt | Tee-Object -file $log -Append
+  if(!(Test-Path $directory\tmp)) { New-Item -ItemType Directory -Path $directory\tmp | Out-Null }
+  Move-Item $directory\$directory.pdf -Destination $directory\tmp | Tee-Object -file $log -Append
+  Write-Output "    $(Get-Timestamp) PDF split into pages." | Tee-Object -file $log -Append
+  
+  # Add PDF to item metadata
+  $pdfrow = "{0}`t{1}`t{2}`t{3}`t{4}`t{5}`t{6}`t{7}`t{8}`t{9}`t{10}`t{11}`t{12}`t{13}`t{14}`t{15}`t{16}`t{17}`t{18}`t{19}`t{20}`t{21}`t{22}`t{23}`t{24}`t{25}" -f """""", """""", """$directory.pdf""", """Complete PDF""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""" ,"""""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """"""
+  $pdfrow | Out-File $directory\$directory.txt -Append -Encoding ASCII
+  Write-Output "    $(Get-Timestamp) PDF item metadata has been added." | Tee-Object -file $log -Append
+    
   # Add item metadata to metadata txt, including file names and seqential titles (Page 1, Page 2, etc.)
   # Refactor to dynamically read headers and generate row 
   $i=1
@@ -35,17 +48,12 @@ ForEach ($directory in $directories.keys)
     $item | Out-File $directory\$directory.txt -Append -Encoding ASCII
     $i++
   }
-  Write-Output "    $(Get-Timestamp) Item metadata has been added." | Tee-Object -file $log -Append
+  Write-Output "    $(Get-Timestamp) Page item metadata has been added." | Tee-Object -file $log -Append
 
   # Move JP2 to scans directory
   if(!(Test-Path $directory\scans)) { New-Item -ItemType Directory -Path $directory\scans | Out-Null }
   Get-ChildItem *.jp2 -Path $directory | ForEach-Object { Move-Item $directory\$_ -Destination $directory\scans | Tee-Object -file $log -Append } 
   Write-Output "    $(Get-Timestamp) JP2 files have been moved to the scans directory." | Tee-Object -file $log -Append
-
-  # split object PDFs
-  pdftk $directory\$directory.pdf burst output $directory\$directory-%02d.pdf | Tee-Object -file $log -Append
-  Remove-Item $directory\$directory.pdf | Tee-Object -file $log -Append
-  Remove-Item $directory\doc_data.txt | Tee-Object -file $log -Append
 
   # Move PDFs to transcripts directory because we won't be able to distinguish metadata from text otherwise
   if(!(Test-Path $directory\transcripts)) { New-Item -ItemType Directory -Path $directory\transcripts | Out-Null }
@@ -73,5 +81,9 @@ ForEach ($directory in $directories.keys)
   # Find the tif files and delete them.
   Get-ChildItem *.tif* -Path $directory | ForEach-Object { Remove-Item -Path $_.FullName | Tee-Object -file $log -Append }
   Write-Output "    $(Get-Timestamp) TIF files have been deleted." | Tee-Object -file $log -Append
+
+  # Move the complete PDF to the scans directory and delete the tmp directory.
+  Move-Item $directory\tmp\$directory.pdf -Destination $directory\scans | Tee-Object -file $log -Append
+  Remove-Item $directory\tmp | Tee-Object -file $log -Append
 }
 Write-Output "$(Get-Timestamp) CLIR CONTENTdm Prep Complete." | Tee-Object -file $log -Append
