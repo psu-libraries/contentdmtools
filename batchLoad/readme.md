@@ -75,3 +75,4 @@ When ever the end product is intended for digital collections, please ensure tha
 ## To Do
   - [ ] Hierarchical Monograph Compound Objects
   - [ ] Refactor to use the identifier field and get rid of the directory field
+  - [ ] Switch to GraphicsMagick for generating JP2
