@@ -28,7 +28,6 @@ ForEach ($directory in $directories.keys)
 
   # split object PDFs and move complete PDF to tmp directory
   pdftk $directory\$directory.pdf burst output $directory\$directory-%02d.pdf | Tee-Object -file $log -Append
-  # Remove-Item $directory\$directory.pdf | Tee-Object -file $log -Append
   Remove-Item $directory\doc_data.txt | Tee-Object -file $log -Append
   if(!(Test-Path $directory\tmp)) { New-Item -ItemType Directory -Path $directory\tmp | Out-Null }
   Move-Item $directory\$directory.pdf -Destination $directory\tmp | Tee-Object -file $log -Append
