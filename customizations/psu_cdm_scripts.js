@@ -87,7 +87,7 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
   });
 })();
 
-// Matomo analytics, added by Nathan Tallman, January 2019
+// Matomo analytics, added by Nathan Tallman, April 2019
 
     var _paq = window._paq || [];
     _paq.push(['trackPageView']);
@@ -98,198 +98,76 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
     _paq.push(['setSiteId', '3']);
     var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
 
-document.addEventListener('cdm-home-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
+  function genericPageView() {
+    var pageTitle = document.querySelector('title').innerHTML;
+    _paq.push(['setDocumentTitle', pageTitle]);
+    // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
+    _paq.push(['deleteCustomVariables', 'page']);
+    _paq.push(['setGenerationTimeMs', 0]);
+    _paq.push(['trackPageView']);
 
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-home-page:update', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
+    // make Matomo aware of newly added content
+    _paq.push(['MediaAnalytics::scanForMedia']);
+    _paq.push(['FormAnalytics::scanForForms']);
+    _paq.push(['trackAllContentImpressions']);
+    _paq.push(['enableLinkTracking']);
+  }
 
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-about-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
+  function itemPageView() {
+    var pageTitle = document.querySelector('title').innerHTML;
+    _paq.push(['setDocumentTitle', pageTitle]);
+    // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
+    _paq.push(['deleteCustomVariables', 'page']);
+    _paq.push(['setGenerationTimeMs', 0]);
+    _paq.push(['trackPageView']);
 
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-login-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
+    // make Matomo aware of newly added content
+    _paq.push(['MediaAnalytics::scanForMedia']);
+    _paq.push(['FormAnalytics::scanForForms']);
+    _paq.push(['trackAllContentImpressions']);
+    _paq.push(['enableLinkTracking']);
 
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-search-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
+    if (document.querySelector('.ItemTitle-secondaryTitle')) {
+      var title = document.querySelector('.ItemTitle-primaryTitle').innerText;
+      var subTitle = document.querySelector('.ItemTitle-secondaryTitle').innerText;
+      var fullTitle = title + ': ' + subTitle;
+    } else {
+      var fullTitle = document.querySelector('.ItemTitle-primaryTitle').innerText;
+    }
+    // Download event tracking
+    if (document.querySelector('.ItemDownload-itemDownloadButtonPadding')) {
+      document.getElementsByClassName('ItemDownload-itemDownloadButtonPadding').onclick = _paq.push(['trackEvent', 'Download', 'Object', fullTitle]);
+    }
+    if (document.querySelector('a[data-metrics-event-label*="download:Small"]')) {
+      document.querySelector('a[data-metrics-event-label*="download:Small"]').onclick = _paq.push(['trackEvent', 'Download', 'Small', fullTitle]);
+    }
+    if (document.querySelector('a[data-metrics-event-label*="download:Medium"]')) {
+      document.querySelector('a[data-metrics-event-label*="download:Medium"]').onclick = _paq.push(['trackEvent', 'Download', 'Medium', fullTitle]);
+    }
+    if (document.querySelector('a[data-metrics-event-label*="download:Large"]')) {
+      document.querySelector('a[data-metrics-event-label*="download:Large"]').onclick = _paq.push(['trackEvent', 'Download', 'Large', fullTitle]);
+    }
+    if (document.querySelector('a[data-metrics-event-label*="download:Extra"]')) {
+      document.querySelector('a[data-metrics-event-label*="download:Extra"]').onclick = _paq.push(['trackEvent', 'Download', 'Extra Large', fullTitle]);
+    }
+    if (document.querySelector('a[data-metrics-event-label*="download:Full"]')) {
+      document.querySelector('a[data-metrics-event-label*="download:Full"]').onclick = _paq.push(['trackEvent', 'Download', 'Full Size', fullTitle]);
+    }
+  }
 
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-search-page:update', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-collection-landing-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-collection-search-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-collection-search-page:update', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-advanced-search-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-advanced-search-page:update', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-item-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-item-page:update', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-custom-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
-document.addEventListener('cdm-notfound-page:ready', function() {
-  // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
-  _paq.push(['deleteCustomVariables', 'page']);
-  _paq.push(['setGenerationTimeMs', 0]);
-  _paq.push(['trackPageView']);
-
-  // make Matomo aware of newly added content
-  var content = document.getElementById('root');
-  _paq.push(['MediaAnalytics::scanForMedia', content]);
-  _paq.push(['FormAnalytics::scanForForms', content]);
-  _paq.push(['trackContentImpressionsWithinNode', content]);
-  _paq.push(['enableLinkTracking']);
-});
+document.addEventListener('cdm-about-page:ready', genericPageView);
+document.addEventListener('cdm-login-page:ready', genericPageView);
+document.addEventListener('cdm-custom-page:ready', genericPageView);
+document.addEventListener('cdm-notfound-page:ready', genericPageView);
+document.addEventListener('cdm-home-page:ready', genericPageView);
+document.addEventListener('cdm-home-page:update', genericPageView);
+document.addEventListener('cdm-search-page:ready', genericPageView);
+document.addEventListener('cdm-search-page:update', genericPageView);
+document.addEventListener('cdm-collection-landing-page:ready', genericPageView);
+document.addEventListener('cdm-collection-landing-page:update', genericPageView);
+document.addEventListener('cdm-collection-search-page:ready', genericPageView);
+document.addEventListener('cdm-collection-search-page:update', genericPageView);
+document.addEventListener('cdm-advanced-search-page:ready', genericPageView);
+document.addEventListener('cdm-advanced-search-page:update', genericPageView);
+document.addEventListener('cdm-item-page:ready', itemPageView);
+document.addEventListener('cdm-item-page:update', itemPageView);
