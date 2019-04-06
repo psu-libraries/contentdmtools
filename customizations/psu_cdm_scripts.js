@@ -160,7 +160,7 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
       }
       if (document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[1]) {
         document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[1].addEventListener('click', function() {
-          _paq.push(['trackEvent', 'Print', 'Object', title]);
+          _paq.push(['trackEvent', 'Print', 'Object', document.querySelector('.ItemTitle-primaryTitle').innerText]);
         }, true);
       }
     } else {
