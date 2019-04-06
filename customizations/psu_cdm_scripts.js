@@ -100,31 +100,21 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
 
   function genericPageView() {
     var pageTitle = document.querySelector('title').innerHTML;
-    // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
     _paq.push(['deleteCustomVariables', 'page']);
     _paq.push(['setDocumentTitle', pageTitle]);
     _paq.push(['setGenerationTimeMs', 0]);
     _paq.push(['trackPageView']);
-
-    // make Matomo aware of newly added content
-    _paq.push(['MediaAnalytics::scanForMedia']);
-    _paq.push(['FormAnalytics::scanForForms']);
     _paq.push(['trackAllContentImpressions']);
     _paq.push(['enableLinkTracking']);
   }
 
   function itemPageView() {
     var pageTitle = document.querySelector('title').innerHTML;
-    // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
     _paq.push(['deleteCustomVariables', 'page']);
     _paq.push(['setDocumentTitle', pageTitle]);
     _paq.push(['setGenerationTimeMs', 0]);
     _paq.push(['trackPageView']);
-
-    // make Matomo aware of newly added content
-    _paq.push(['MediaAnalytics::scanForMedia']);
-    _paq.push(['FormAnalytics::scanForForms']);
-    _paq.push(['trackContentImpressionsWithinNode', document.querySelector('.ItemView-itemViewContainer')]);
+    _paq.push(['trackAllContentImpressions']);
     _paq.push(['enableLinkTracking']);
 
     if (document.querySelector('.ItemTitle-secondaryTitle')) {
@@ -210,16 +200,11 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
 
   function itemPageViewUpdate() {
     var pageTitle = document.querySelector('title').innerHTML;
-    // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
     _paq.push(['deleteCustomVariables', 'page']);
     _paq.push(['setDocumentTitle', pageTitle]);
     _paq.push(['setGenerationTimeMs', 0]);
     _paq.push(['trackPageView']);
-
-    // make Matomo aware of newly added content
-    _paq.push(['MediaAnalytics::scanForMedia']);
-    _paq.push(['FormAnalytics::scanForForms']);
-    _paq.push(['trackContentImpressionsWithinNode', document.querySelector('.ItemView-itemViewContainer')]);
+    _paq.push(['trackAllContentImpressions']);
     _paq.push(['enableLinkTracking']);
 
     if (document.querySelector('.ItemTitle-secondaryTitle')) {
