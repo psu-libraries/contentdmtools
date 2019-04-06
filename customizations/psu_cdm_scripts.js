@@ -100,9 +100,9 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
 
   function genericPageView() {
     var pageTitle = document.querySelector('title').innerHTML;
-    _paq.push(['setDocumentTitle', pageTitle]);
     // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
     _paq.push(['deleteCustomVariables', 'page']);
+    _paq.push(['setDocumentTitle', pageTitle]);
     _paq.push(['setGenerationTimeMs', 0]);
     _paq.push(['trackPageView']);
 
@@ -115,59 +115,134 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
 
   function itemPageView() {
     var pageTitle = document.querySelector('title').innerHTML;
-    _paq.push(['setDocumentTitle', pageTitle]);
     // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
     _paq.push(['deleteCustomVariables', 'page']);
+    _paq.push(['setDocumentTitle', pageTitle]);
     _paq.push(['setGenerationTimeMs', 0]);
     _paq.push(['trackPageView']);
 
     // make Matomo aware of newly added content
     _paq.push(['MediaAnalytics::scanForMedia']);
     _paq.push(['FormAnalytics::scanForForms']);
-    _paq.push(['trackAllContentImpressions']);
+    _paq.push(['trackContentImpressionsWithinNode', document.querySelector('.ItemView-itemViewContainer')]);
     _paq.push(['enableLinkTracking']);
 
     if (document.querySelector('.ItemTitle-secondaryTitle')) {
       var title = document.querySelector('.ItemTitle-primaryTitle').innerText;
       var subTitle = document.querySelector('.ItemTitle-secondaryTitle').innerText;
-      var fullTitle = title + ': ' + subTitle;
+      title = title + ': ' + subTitle;
     } else {
-      var fullTitle = document.querySelector('.ItemTitle-primaryTitle').innerText;
+      var title = document.querySelector('.ItemTitle-primaryTitle').innerText;
     }
-    // Download event tracking
+
+    if (document.querySelector('.ItemPDF-expandButton')) {
+      document.querySelector('.ItemPDF-expandButton').addEventListener('click', function () {
+        _paq.push(['trackContentInteractionNode', document.querySelector('.ItemView-itemViewContainer'), 'openedPDF']);
+        _paq.push(['trackEvent', 'Open', 'PDF', title]);
+      }, true);
+    }
+    if (document.querySelector('.ItemImage-expandButton')) {
+      document.querySelector('.ItemImage-expandButton').addEventListener('click', function () {
+        _paq.push(['trackContentInteractionNode', document.querySelector('.ItemView-itemViewContainer'), 'openedImage']);
+        _paq.push(['trackEvent', 'Open', 'Image', title]);
+      }, true);
+    }
     if (document.querySelector('.ItemDownload-itemDownloadButtonPadding')) {
-      document.getElementsByClassName('ItemDownload-itemDownloadButtonPadding').onclick = _paq.push(['trackEvent', 'Download', 'Object', fullTitle]);
+      document.querySelector('.ItemDownload-itemDownloadButtonPadding').addEventListener('click', function() {
+        _paq.push(['trackEvent', 'Download', 'Object', title]);
+      }, true);
     }
+    if (document.querySelector('video')) {
+      document.querySelector('video').addEventListener("play", function () {
+        _paq.push(['trackEvent', 'Play', 'Video', title]);
+    }, true);
+    }
+    if (document.querySelector('audio')) {
+      document.querySelector('audio').addEventListener("play", function () {
+        _paq.push(['trackEvent', 'Play', 'Audio', title]);
+    }, true);
+    }
+    if (document.querySelector('ul[aria-labelledby="print-dropdown-compound-item-side-bar"]')) {
+      if (document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[0]) {
+        document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[0].addEventListener('click', function() {
+          _paq.push(['trackEvent', 'Print', 'Item', title]);
+        }, true);
+      }
+      if (document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[1]) {
+        document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[1].addEventListener('click', function() {
+          _paq.push(['trackEvent', 'Print', 'Object', title]);
+        }, true);
+      }
+    } else {
+      if (document.querySelector('button[aria-label="Print"]')) {
+        document.querySelector('button[aria-label="Print"]').addEventListener('click', function() {
+          _paq.push(['trackEvent', 'Print', 'Object', title]);
+        }, true);
+      }
+    }
+
     if (document.querySelector('a[data-metrics-event-label*="download:Small"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Small"]').onclick = _paq.push(['trackEvent', 'Download', 'Small', fullTitle]);
+      document.querySelector('a[data-metrics-event-label*="download:Small"]').addEventListener('click', function() {
+        _paq.push(['trackEvent', 'Download', 'Small', title]);
+      }, true);
     }
     if (document.querySelector('a[data-metrics-event-label*="download:Medium"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Medium"]').onclick = _paq.push(['trackEvent', 'Download', 'Medium', fullTitle]);
+      document.querySelector('a[data-metrics-event-label*="download:Medium"]').addEventListener('click', function() {
+        _paq.push(['trackEvent', 'Download', 'Medium', title]);
+      }, true);
     }
     if (document.querySelector('a[data-metrics-event-label*="download:Large"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Large"]').onclick = _paq.push(['trackEvent', 'Download', 'Large', fullTitle]);
+      document.querySelector('a[data-metrics-event-label*="download:Large"]').addEventListener('click', function() {
+        _paq.push(['trackEvent', 'Download', 'Large', title]);
+      }, true);
     }
     if (document.querySelector('a[data-metrics-event-label*="download:Extra"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Extra"]').onclick = _paq.push(['trackEvent', 'Download', 'Extra Large', fullTitle]);
+      document.querySelector('a[data-metrics-event-label*="download:Extra"]').addEventListener('click', function() {
+        _paq.push(['trackEvent', 'Download', 'Extra Large', title]);
+      }, true);
     }
     if (document.querySelector('a[data-metrics-event-label*="download:Full"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Full"]').onclick = _paq.push(['trackEvent', 'Download', 'Full Size', fullTitle]);
+      document.querySelector('a[data-metrics-event-label*="download:Full"]').addEventListener('click', function() {
+        _paq.push(['trackEvent', 'Download', 'Full Size', title]);
+      }, true);
     }
   }
 
-document.addEventListener('cdm-about-page:ready', genericPageView);
-document.addEventListener('cdm-login-page:ready', genericPageView);
-document.addEventListener('cdm-custom-page:ready', genericPageView);
-document.addEventListener('cdm-notfound-page:ready', genericPageView);
-document.addEventListener('cdm-home-page:ready', genericPageView);
-document.addEventListener('cdm-home-page:update', genericPageView);
-document.addEventListener('cdm-search-page:ready', genericPageView);
-document.addEventListener('cdm-search-page:update', genericPageView);
-document.addEventListener('cdm-collection-landing-page:ready', genericPageView);
-document.addEventListener('cdm-collection-landing-page:update', genericPageView);
-document.addEventListener('cdm-collection-search-page:ready', genericPageView);
-document.addEventListener('cdm-collection-search-page:update', genericPageView);
-document.addEventListener('cdm-advanced-search-page:ready', genericPageView);
-document.addEventListener('cdm-advanced-search-page:update', genericPageView);
-document.addEventListener('cdm-item-page:ready', itemPageView);
-document.addEventListener('cdm-item-page:update', itemPageView);
+  function itemPageViewUpdate() {
+    var pageTitle = document.querySelector('title').innerHTML;
+    // remove all previously assigned custom variables, requires Matomo (formerly Piwik) 3.0.2
+    _paq.push(['deleteCustomVariables', 'page']);
+    _paq.push(['setDocumentTitle', pageTitle]);
+    _paq.push(['setGenerationTimeMs', 0]);
+    _paq.push(['trackPageView']);
+
+    // make Matomo aware of newly added content
+    _paq.push(['MediaAnalytics::scanForMedia']);
+    _paq.push(['FormAnalytics::scanForForms']);
+    _paq.push(['trackContentImpressionsWithinNode', document.querySelector('.ItemView-itemViewContainer')]);
+    _paq.push(['enableLinkTracking']);
+
+    if (document.querySelector('.ItemTitle-secondaryTitle')) {
+      var title = document.querySelector('.ItemTitle-primaryTitle').innerText;
+      var subTitle = document.querySelector('.ItemTitle-secondaryTitle').innerText;
+      title = title + ': ' + subTitle;
+    } else {
+      var title = document.querySelector('.ItemTitle-primaryTitle').innerText;
+    }
+  }
+
+  document.addEventListener('cdm-about-page:ready', genericPageView);
+  document.addEventListener('cdm-login-page:ready', genericPageView);
+  document.addEventListener('cdm-custom-page:ready', genericPageView);
+  document.addEventListener('cdm-notfound-page:ready', genericPageView);
+  document.addEventListener('cdm-collection-landing-page:ready', genericPageView);
+  document.addEventListener('cdm-home-page:ready', genericPageView);
+  document.addEventListener('cdm-home-page:update', genericPageView);
+  document.addEventListener('cdm-search-page:ready', genericPageView);
+  document.addEventListener('cdm-search-page:update', genericPageView);
+  document.addEventListener('cdm-collection-search-page:ready', genericPageView);
+  document.addEventListener('cdm-collection-search-page:update', genericPageView);
+  document.addEventListener('cdm-advanced-search-page:ready', genericPageView);
+  document.addEventListener('cdm-advanced-search-page:update', genericPageView);
+  document.addEventListener('cdm-item-page:ready', itemPageView);
+  document.addEventListener('cdm-item-page:update', itemPageViewUpdate);
