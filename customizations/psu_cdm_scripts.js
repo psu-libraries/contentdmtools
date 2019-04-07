@@ -87,7 +87,8 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
   });
 })();
 
-// Matomo analytics, added by Nathan Tallman, April 2019
+// Matomo analytics, added by Nathan Tallman
+// 2019-04-07: Fully working with pageviews and events (object interaction, downloads, printing)
 
     var _paq = window._paq || [];
     var u="https://analytics.libraries.psu.edu/matomo/";
@@ -127,30 +128,25 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
     if (document.querySelector('.ItemPDF-expandButton')) {
       document.querySelector('.ItemPDF-expandButton').addEventListener('click', function () {
         _paq.push(['trackEvent', 'Open', 'PDF', title]);
-      }, true);
+      }, false);
     }
     if (document.querySelector('.ItemImage-expandButton')) {
       document.querySelector('.ItemImage-expandButton').addEventListener('click', function () {
         _paq.push(['trackEvent', 'Open', 'Image', title]);
-      }, true);
-    }
-    if (document.querySelector('.ItemDownload-itemDownloadButtonPadding')) {
-      document.querySelector('.ItemDownload-itemDownloadButtonPadding').addEventListener('click', function() {
-        _paq.push(['trackEvent', 'Download', 'Object', title]);
-      }, true);
+      }, false);
     }
     if (document.querySelector('video')) {
       document.querySelector('video').addEventListener("play", function () {
         _paq.push(['trackEvent', 'Play', 'Video', title]);
-      }, true);
+      }, false);
     }
     if (document.querySelector('audio')) {
       document.querySelector('audio').addEventListener("play", function () {
         _paq.push(['trackEvent', 'Play', 'Audio', title]);
-      }, true);
+      }, false);
     }
 
-    // Events for downloading (last one not working)
+    // Events for downloading
     if (document.querySelector('#downloadsizemenu-side-bar')) {
       var menuItems = document.querySelectorAll('#downloadsizemenu-side-bar > li').length;
       if (menuItems == 5) {
@@ -177,28 +173,46 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
       }
     }
     if (document.querySelector('.ItemDownload-itemDownloadButtonPadding')) {
-      document.querySelector('.ItemDownload-itemDownloadButtonPadding').addEventListener('click', function() {
-        _paq.push(['trackEvent', 'Download', 'Object', title]);
-      }, false);
+      if (document.querySelectorAll('.ItemDownload-itemDownloadButtonPadding')) {
+        var db = document.querySelectorAll('.ItemDownload-itemDownloadButtonPadding').length;
+        for (var i = 0; i < db; i++) {
+          document.querySelectorAll('.ItemDownload-itemDownloadButtonPadding')[i].addEventListener('click', function() {
+            _paq.push(['trackEvent', 'Download', 'Object', title]);
+          }, false);
+        }
+      } else {
+        document.querySelector('.ItemDownload-itemDownloadButtonPadding').addEventListener('click', function() {
+          _paq.push(['trackEvent', 'Download', 'Object', title]);
+        }, false);
+      }
     }
 
-    // Events for printing (last one not working on desktop, mobile?)
+    // Events for printing
     if (document.querySelector('ul[aria-labelledby="print-dropdown-compound-item-side-bar"]')) {
       if (document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[0]) {
         document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[0].addEventListener('click', function() {
           _paq.push(['trackEvent', 'Print', 'Item', title]);
-        }, true);
+        }, false);
       }
       if (document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[1]) {
         document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[1].addEventListener('click', function() {
           _paq.push(['trackEvent', 'Print', 'Object', document.querySelector('.ItemTitle-primaryTitle').innerText]);
-        }, true);
+        }, false);
       }
     } else {
       if (document.querySelector('button[aria-label="Print"]')) {
-        document.querySelector('button[aria-label="Print"]').addEventListener('click', function() {
-          _paq.push(['trackEvent', 'Print', 'Object', title]);
-        }, true);
+        if (document.querySelectorAll('button[aria-label="Print"]')) {
+          var pb = document.querySelectorAll('button[aria-label="Print"]').length;
+          for (var l = 0; l < pb; l++) {
+            document.querySelectorAll('button[aria-label="Print"]')[l].addEventListener('click', function() {
+              _paq.push(['trackEvent', 'Print', 'Object', title]);
+            }, false);
+          }
+        } else {
+          document.querySelector('button[aria-label="Print"]').addEventListener('click', function() {
+            _paq.push(['trackEvent', 'Print', 'Object', title]);
+          }, false);
+        }
       }
     }
   }
