@@ -90,13 +90,11 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
 // Matomo analytics, added by Nathan Tallman, April 2019
 
     var _paq = window._paq || [];
-    _paq.push(['trackPageView']);
-    _paq.push(['enableLinkTracking']);
-
     var u="https://analytics.libraries.psu.edu/matomo/";
     _paq.push(['setTrackerUrl', u+'matomo.php']);
     _paq.push(['setSiteId', '3']);
-    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
 
   function genericPageView() {
     var pageTitle = document.querySelector('title').innerHTML;
@@ -125,15 +123,14 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
       var title = document.querySelector('.ItemTitle-primaryTitle').innerText;
     }
 
+    // Events for opening and playing media
     if (document.querySelector('.ItemPDF-expandButton')) {
       document.querySelector('.ItemPDF-expandButton').addEventListener('click', function () {
-        _paq.push(['trackContentInteractionNode', document.querySelector('.ItemView-itemViewContainer'), 'openedPDF']);
         _paq.push(['trackEvent', 'Open', 'PDF', title]);
       }, true);
     }
     if (document.querySelector('.ItemImage-expandButton')) {
       document.querySelector('.ItemImage-expandButton').addEventListener('click', function () {
-        _paq.push(['trackContentInteractionNode', document.querySelector('.ItemView-itemViewContainer'), 'openedImage']);
         _paq.push(['trackEvent', 'Open', 'Image', title]);
       }, true);
     }
@@ -145,13 +142,47 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
     if (document.querySelector('video')) {
       document.querySelector('video').addEventListener("play", function () {
         _paq.push(['trackEvent', 'Play', 'Video', title]);
-    }, true);
+      }, true);
     }
     if (document.querySelector('audio')) {
       document.querySelector('audio').addEventListener("play", function () {
         _paq.push(['trackEvent', 'Play', 'Audio', title]);
-    }, true);
+      }, true);
     }
+
+    // Events for downloading (last one not working)
+    if (document.querySelector('#downloadsizemenu-side-bar')) {
+      var menuItems = document.querySelectorAll('#downloadsizemenu-side-bar > li').length;
+      if (menuItems == 5) {
+         document.querySelectorAll('#downloadsizemenu-side-bar > li')[0].addEventListener('click', function() {
+           _paq.push(['trackEvent', 'Download', 'Small', title]);
+         }, false);
+         document.querySelectorAll('#downloadsizemenu-side-bar > li')[1].addEventListener('click', function() {
+           _paq.push(['trackEvent', 'Download', 'Medium', title]);
+         }, false);
+         document.querySelectorAll('#downloadsizemenu-side-bar > li')[2].addEventListener('click', function() {
+           _paq.push(['trackEvent', 'Download', 'Large', title]);
+         }, false);
+         document.querySelectorAll('#downloadsizemenu-side-bar > li')[3].addEventListener('click', function() {
+           _paq.push(['trackEvent', 'Download', 'Extra Large', title]);
+         }, false);
+         document.querySelectorAll('#downloadsizemenu-side-bar > li')[4].addEventListener('click', function() {
+           _paq.push(['trackEvent', 'Download', 'Full Size', title]);
+         }, false);
+      }
+      if (menuItems == 1) {
+        document.querySelectorAll('#downloadsizemenu-side-bar > li')[0].addEventListener('click', function() {
+          _paq.push(['trackEvent', 'Download', 'Object', title]);
+        }, false);
+      }
+    }
+    if (document.querySelector('.ItemDownload-itemDownloadButtonPadding')) {
+      document.querySelector('.ItemDownload-itemDownloadButtonPadding').addEventListener('click', function() {
+        _paq.push(['trackEvent', 'Download', 'Object', title]);
+      }, false);
+    }
+
+    // Events for printing (last one not working on desktop, mobile?)
     if (document.querySelector('ul[aria-labelledby="print-dropdown-compound-item-side-bar"]')) {
       if (document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[0]) {
         document.querySelectorAll('ul[aria-labelledby="print-dropdown-compound-item-side-bar"] > li')[0].addEventListener('click', function() {
@@ -169,32 +200,6 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
           _paq.push(['trackEvent', 'Print', 'Object', title]);
         }, true);
       }
-    }
-
-    if (document.querySelector('a[data-metrics-event-label*="download:Small"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Small"]').addEventListener('click', function() {
-        _paq.push(['trackEvent', 'Download', 'Small', title]);
-      }, true);
-    }
-    if (document.querySelector('a[data-metrics-event-label*="download:Medium"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Medium"]').addEventListener('click', function() {
-        _paq.push(['trackEvent', 'Download', 'Medium', title]);
-      }, true);
-    }
-    if (document.querySelector('a[data-metrics-event-label*="download:Large"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Large"]').addEventListener('click', function() {
-        _paq.push(['trackEvent', 'Download', 'Large', title]);
-      }, true);
-    }
-    if (document.querySelector('a[data-metrics-event-label*="download:Extra"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Extra"]').addEventListener('click', function() {
-        _paq.push(['trackEvent', 'Download', 'Extra Large', title]);
-      }, true);
-    }
-    if (document.querySelector('a[data-metrics-event-label*="download:Full"]')) {
-      document.querySelector('a[data-metrics-event-label*="download:Full"]').addEventListener('click', function() {
-        _paq.push(['trackEvent', 'Download', 'Full Size', title]);
-      }, true);
     }
   }
 
