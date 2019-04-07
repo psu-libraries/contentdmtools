@@ -172,7 +172,7 @@ document.addEventListener('cdm-custom-page:ready', changeLogoLink);
       }
       if (menuItems == 1) {
         document.querySelectorAll('#downloadsizemenu-side-bar > li')[0].addEventListener('click', function() {
-          _paq.push(['trackEvent', 'Download', 'Object', title]);
+          _paq.push(['trackEvent', 'Download', 'Item', title]);
         }, false);
       }
     }
