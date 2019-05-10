@@ -1,6 +1,6 @@
 # batchLoadCreate.ps1 
-# Nathan Tallman, Created in August 2018, Updated in November 2018
-# Modified in April 2019 for CLIR grant
+# Nathan Tallman, Created in August 2018, updated in November 2018
+# Modified in April 2019 for CLIR grant, updated 10 May 2019
 # https://git.psu.edu/digipres/contentdm/edit/master/batchLoad
 # this is fragile, only works for this collection as of this date, will break if the number of fields change. This could probably be refactored to read number of fields and generate stuff as needed?
 
@@ -60,15 +60,15 @@ ForEach ($directory in $directories.keys)
 
   #Extract text and delete item PDF
   Get-ChildItem *.pdf -Path $directory\transcripts | ForEach-Object {
-    .\pdftotext.exe $directory\transcripts\$_ | Tee-Object -file $log -Append
+    .\pdftotext.exe -raw -nopgbrk $directory\transcripts\$_ | Tee-Object -file $log -Append
     Remove-Item $directory\transcripts\$_ | Tee-Object -file $log -Append
   }
 
   #rename TXT to match jp2
-  $jp2s = @(Get-ChildItem *.jp2 -Path $directory\scans -Name | Sort)
-  $txts = @(Get-ChildItem *.txt -Path $directory\transcripts -Name | Sort)
+  $jp2s = @(Get-ChildItem *.jp2 -Path $directory\scans -Name | Sort-Object)
+  $txts = @(Get-ChildItem *.txt -Path $directory\transcripts -Name | Sort-Object)
   $i=0
-  Get-ChildItem -Path $directory\transcripts\*.txt -Name | Sort | ForEach-Object {
+  Get-ChildItem -Path $directory\transcripts\*.txt -Name | Sort-Object | ForEach-Object {
     $name = $jp2s[$i]
     $name = $name.Substring(0,$name.Length-4)
     $txt = $txts[$i]
