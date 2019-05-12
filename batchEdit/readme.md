@@ -10,3 +10,30 @@ You will be prompted to enter your CONTENTdm username and password, as well as t
   * **Controlled vocabularies and required fields (other than title) must be turned off before pitching metadata to catcher**. Make note of the settings and turn them back on after done batch editing.
   * **Field names used as headers are not the same as the field name labels in CONTENTdm**. Look at the `CISONICK` value in the Field Properties in the Admin Gui for the correct field name to use as the CSV header.
   * **Log directories need to be created** or pitcher will throw an error. You may have to create `logs` subdirectories in **both** your home directory and the active directory the `batchEdit.ps1` script is running from, if it does not already exist.
+
+#### metadata.csv
+
+| dmrecord | title         | subjec        |
+| -------- | ------------- | ------------- |
+| 108      | OBJECT TITLE  | Batch Edit 19 |
+| 99       | OBJECT TITLE  | Batch Edit 18 |
+| 90       | Batch Edit 20 | Batch Edit 17 |
+| 91       | Batch Edit 01 | Batch Edit 24 |
+| 92       | Batch Edit 02 | Batch Edit 25 |
+| 93       | Batch Edit 03 | Batch Edit 26 |
+| 94       | Batch Edit 04 | Batch Edit 27 |
+
+Sample workflow
+- Export metadata from CONTENTdm
+- Work in Excel or Open Refine and batch edit.
+- Remove fields/columns with no changes.
+- Remove rows with no changes. (This isn't critical, but good practice.)
+- Place all compound object-level metadata at the beginning of the spreadsheet.
+- Rename fields/columns with CONTENTdm `CISONICK` field name as indicated above.
+  - The CONTENTdm record number must always be included with the name `dmrecord`.
+- Export UTF-8 CSV called metadata.csv and save it in the directory where `batchEdit.ps1` is saved.
+  - You can pass any CSV with `-csv path.csv` as the first parameter when executing the script.
+- Note field property configurations and disable required fields and controlled vocabulary in Admin GUI.
+- Run `batchEdit.ps1` in a PowerShell window.
+- Index the collection.
+- Re-configure field properties.
