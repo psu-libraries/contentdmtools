@@ -92,18 +92,18 @@ $SOAPRequest += "`t`t`t<username>$user</username>`r`n"
 $SOAPRequest += "`t`t`t<password>$pw</password>`r`n"
 $SOAPRequest += "`t`t`t<license>$lc</license>`r`n"
 $SOAPRequest += "`t`t`t<collection>$alias</collection>`r`n"
-  $SOAPRequest += "`t`t`t`t<metadata>`r`n"
-  $SOAPRequest += "`t`t`t`t<metadataList>`r`n"
-  ForEach ($header in $headers ) {
-    $SOAPRequest += "`t`t`t`t`t<metadata>`r`n"
+$SOAPRequest += "`t`t`t`t<metadata>`r`n"
+$SOAPRequest += "`t`t`t`t`t<metadataList>`r`n"
+  ForEach ($header in $headers) {
+    $SOAPRequest += "`t`t`t`t`t`t<metadata>`r`n"
     ForEach ($data in $record.$header) {
-      $SOAPRequest += "`t`t`t`t`t`t<field>" + $header + "</field>`r`n"
-      $SOAPRequest += "`t`t`t`t`t`t<value>" + $data + "</value>`r`n"
-      }
-    $SOAPRequest += "`t`t`t`t`t</metadata>`r`n"
+      $SOAPRequest += "`t`t`t`t`t`t`t<field>" + $header + "</field>`r`n"
+      $SOAPRequest += "`t`t`t`t`t`t`t<value>" + $data + "</value>`r`n"
+    }
+    $SOAPRequest += "`t`t`t`t`t`t</metadata>`r`n"
   }
-  $SOAPRequest += "`t`t`t`t</metadataList>`r`n"
-  $SOAPRequest += "`t`t`t`t</metadata>`r`n"
+$SOAPRequest += "`t`t`t`t`t</metadataList>`r`n"
+$SOAPRequest += "`t`t`t`t</metadata>`r`n"
 $SOAPRequest += "`t`t</v6:processCONTENTdm>`r`n"
 $SOAPRequest += "`t</soapenv:Body>`r`n"
 $SOAPRequest += "</soapenv:Envelope>"
@@ -112,10 +112,10 @@ $soap = "logs/soap_" + $alias+ "_" + $record.dmrecord + ".xml"
 
 Write-Output "  $(Get-Timestamp) SOAP XML created for $soap, sending it to Catcher..." | Tee-Object -Filepath $log -Append
   Try {
-    #Send-SOAPRequest $SOAPRequest https://worldcat.org/webservices/contentdm/catcher?wsdl | Tee-Object -Filepath $log -Append
+    Send-SOAPRequest $SOAPRequest https://worldcat.org/webservices/contentdm/catcher?wsdl | Tee-Object -Filepath $log -Append
     Write-Output $Return | Tee-Object -Filepath $log -Append
     ## DEBUGGING Comment out the Send-SOAPRequest and remove the comment from the line below to log soap. PASSWORDS EXPOSED
-    Write-Output $SOAPRequest | Out-File -FilePath $soap
+    #Write-Output $SOAPRequest | Out-File -FilePath $soap
   }
   Catch {
     Write-Host "ERROR ERROR ERROR" -Fore "red"
