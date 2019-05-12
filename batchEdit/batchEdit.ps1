@@ -1,5 +1,5 @@
-# Powershell script to process metadata changes in a single data table to a list of per-record field changes for CONTENTdm Catcher, via Pitcher. https://github.com/little9/pitcher
-# Nathan Tallman, August 2018
+# Powershell script to process metadata changes into SOAP XML and feeding it to CONTENTdm Catcher.
+# Nathan Tallman, May 2019
 
 # Read in the metadata changes with -csv path, pass the collection allias with -alias alias.
 param (
@@ -8,6 +8,7 @@ param (
  )
 # Setup timestamps and global variables
 function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
+# SOAP Functions # https://ponderingthought.com/2010/01/17/execute-a-soap-request-from-powershell/
 function Send-SOAPRequest
 (
         [Xml]    $SOAPRequest,
