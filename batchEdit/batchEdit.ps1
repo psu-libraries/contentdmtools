@@ -1,7 +1,7 @@
 # Powershell script to process metadata changes into SOAP XML and feeding it to CONTENTdm Catcher.
-# Nathan Tallman, May 2019
+# Nathan Tallman. Started August 2018, heavily refactored in May 2019.
 
-# Read in the metadata changes with -csv path, pass the collection allias with -alias alias.
+# Read in the metadata changes with -csv path, pass the collection alias with -alias collectionAlias.
 param (
     [string]$csv = "metadata.csv",
     [Parameter(Mandatory=$true)][string]$alias = $(Throw "Use -alias to specify a collection.")
@@ -80,6 +80,8 @@ Write-Output "---------------------" | Out-File -Filepath $log -Append
 $metadata = Import-Csv -Path "$csv"
 $headers = ($metadata[0].psobject.Properties).Name
 
+## TODO: Pull out objects and send them as SOAP first, then send item SOAP
+
 ForEach ($record in $metadata) {
 # Build the SOAP XML
 $SOAPRequest = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v6="http://catcherws.cdm.oclc.org/v6.0.0/">' + "`r`n"
@@ -126,6 +128,7 @@ Write-Output "  $(Get-Timestamp) SOAP XML created for $soap, sending it to Catch
   }
 }
 
+## TODO: Add searching log for errors and reporting back.
 Write-Output "---------------------" | Out-File -Filepath $log -Append
 Write-Host "$(Get-Timestamp) Batch metadata changes are complete."
 Write-Output "$(Get-Timestamp) Batch metadata changes are complete." | Out-File -Filepath $log -Append

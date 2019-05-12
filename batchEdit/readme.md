@@ -6,7 +6,7 @@ Run `.\batchEdit.ps1 -alias collectionAlias` to kick off the script. The data ta
 
 You will be prompted to enter your CONTENTdm username and password, as well as the PSU License. These will be securely stored on your workstation and you wouldn't need to enter them again. If they are lost, you will be prompted to enter them again.
 
-#### WARNINGS
+  * **Put object level metadata first in the metadata csv**. If items metadata appears before the parent object, the obect metadata won't get updated. [Working to remove the requirement by filtering and sorting the CSV data with an extra column.] You should still watch the output or look at the logs for any errors.
   * **Controlled vocabularies and required fields (other than title) must be turned off before pitching metadata to catcher**. Make note of the settings and turn them back on after done batch editing.
   * **Field names used as headers are not the same as the field name labels in CONTENTdm**. Look at the `CISONICK` value in the Field Properties in the Admin Gui for the correct field name to use as the CSV header.
   * **Log directories need to be created** or pitcher will throw an error. You may have to create `logs` subdirectories in **both** your home directory and the active directory the `batchEdit.ps1` script is running from, if it does not already exist.
