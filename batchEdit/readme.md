@@ -42,6 +42,6 @@ You will be prompted to enter your CONTENTdm username and password, as well as t
 - Review log for any errors.
 
 ## Future Development
- - Combine settings for Cather into one file [1](https://git.psu.edu/digipres/contentdm/issues/1)
- - Sort metadata and send object metadata first [2](https://git.psu.edu/digipres/contentdm/issues/2)
- - Search log for errors and report back when ending script [3](https://git.psu.edu/digipres/contentdm/issues/3)
+ - Combine settings for Cather into one file [[1]](https://git.psu.edu/digipres/contentdm/issues/1)
+ - Sort metadata and send object metadata first [[2]](https://git.psu.edu/digipres/contentdm/issues/2)
+ - Search log for errors and report back when ending script [[3]](https://git.psu.edu/digipres/contentdm/issues/3)
