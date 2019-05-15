@@ -3,7 +3,7 @@ The `batchEdit.ps1` script can be used to process `metadata.csv` into SOAP XML t
 
 A [screencast demonstration](https://psu.box.com/s/4fgdgme1d4df3z6vz6gz68jdgs4bu2rt) is available. It is recommended to use the script in the directory is is created in when you save the script to your computer, just move metadata CSV files into the directory as you need to.
 
-### Usage
+## Usage
 Run `.\batchEdit.ps1 -alias collectionAlias` to kick off the script. The data table of metadata changes should be in the in the same directory as the script and named `metadata.csv`. You can pass any CSV by using inserting `-csv path` before the `-alias` parameter when running the script.
 
 You will be prompted to enter your CONTENTdm username and password, as well as the PSU License. These will be securely stored on your workstation in a subdirectory called settings; you wouldn't need to enter them again. If they are lost, you will be prompted to enter them again.
@@ -13,7 +13,7 @@ You will be prompted to enter your CONTENTdm username and password, as well as t
   * **Field names used as headers are not the same as the field name labels in CONTENTdm**. Look at the `CISONICK` value in the Field Properties in the Admin Gui for the correct field name to use as the CSV header.
   * **Log directories need to be created** or pitcher will throw an error. You may have to create `logs` subdirectories in **both** your home directory and the active directory the `batchEdit.ps1` script is running from, if it does not already exist.
 
-#### Sample metadata.csv
+### Sample metadata.csv
 
 | dmrecord | title         | subjec        |
 | -------- | ------------- | ------------- |
@@ -25,7 +25,7 @@ You will be prompted to enter your CONTENTdm username and password, as well as t
 | 93       | Batch Edit 03 | Batch Edit 26 |
 | 94       | Batch Edit 04 | Batch Edit 27 |
 
-#### Sample Workflow
+### Sample Workflow
 - Export metadata from CONTENTdm
 - Work in Excel or Open Refine and batch edit.
 - Remove fields/columns with no changes.
@@ -39,3 +39,9 @@ You will be prompted to enter your CONTENTdm username and password, as well as t
 - Run `batchEdit.ps1` in a PowerShell window.
 - Index the collection.
 - Re-configure field properties.
+- Review log for any errors.
+
+## Future Development
+ - Combine settings for Cather into one file [1](https://git.psu.edu/digipres/contentdm/issues/1)
+ - Sort metadata and send object metadata first [2](https://git.psu.edu/digipres/contentdm/issues/2)
+ - Search log for errors and report back when ending script [3](https://git.psu.edu/digipres/contentdm/issues/3)

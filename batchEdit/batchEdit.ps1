@@ -55,6 +55,7 @@ If(!(Test-Path logs)) {New-Item -ItemType Directory -Path logs | Out-Null }
 $log = ("logs/" + $alias + '_batchEdit_' + $(Get-Date -Format yyyyMMddTHHmmssffff) + "_log.txt")
 
 # Store the user, password and license on local machine so don't have to be entered everytime.
+# TODO: Combine this into one file saved in the root of batchEdit. https://git.psu.edu/digipres/contentdm/issues/1
 Write-Output "Checking for stored user settings, will prompt and store if not found."
 If(!(Test-Path settings)) {New-Item -ItemType Directory -Path settings | Out-Null }
 $user = If(Test-Path settings/user.txt) {Get-Content "settings/user.txt"} else { Read-Host "Enter the CONTENTdm user" }
@@ -74,13 +75,13 @@ $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($license)
 $lc = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
 $BSTR = $null
 
-# Read in the metadata data.
+# Read in the metadata.
 Write-Output "$(Get-Timestamp) Processing metadata edits into SOAP XML for catcher..." | Tee-Object -Filepath $log
 Write-Output "---------------------" | Out-File -Filepath $log -Append
 $metadata = Import-Csv -Path "$csv"
 $headers = ($metadata[0].psobject.Properties).Name
 
-## TODO: Pull out objects and send them as SOAP first, then send item SOAP
+## TODO: Pull out objects and send them as SOAP first, then send item SOAP https://git.psu.edu/digipres/contentdm/issues/2
 
 ForEach ($record in $metadata) {
 # Build the SOAP XML
@@ -128,7 +129,7 @@ Write-Output "  $(Get-Timestamp) SOAP XML created for $soap, sending it to Catch
   }
 }
 
-## TODO: Add searching log for errors and reporting back.
+## TODO: Add searching log for errors and reporting back. https://git.psu.edu/digipres/contentdm/issues/3
 Write-Output "---------------------" | Out-File -Filepath $log -Append
 Write-Host "$(Get-Timestamp) Batch metadata changes are complete."
 Write-Output "$(Get-Timestamp) Batch metadata changes are complete." | Out-File -Filepath $log -Append
