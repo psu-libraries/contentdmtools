@@ -38,44 +38,44 @@ $BSTR = $null
 # Setup SOAP functions # https://ponderingthought.com/2010/01/17/execute-a-soap-request-from-powershell/
 function Send-SOAPRequest
 (
-        [Xml]    $SOAPRequest,
-        [String] $URL
+  [Xml] $SOAPRequest,
+  [String] $URL
 )
 {
-        write-host "Sending SOAP Request To Server: $URL"
-        $soapWebRequest = [System.Net.WebRequest]::Create($URL)
-        $soapWebRequest.ContentType = 'text/xml;charset="utf-8"'
-        $soapWebRequest.Accept      = "text/xml"
-        $soapWebRequest.Method      = "POST"
+  write-host "Sending SOAP Request To Server: $URL"
+  $soapWebRequest = [System.Net.WebRequest]::Create($URL)
+  $soapWebRequest.ContentType = 'text/xml;charset="utf-8"'
+  $soapWebRequest.Accept      = "text/xml"
+  $soapWebRequest.Method      = "POST"
 
-        write-host "Initiating Send."
-        $requestStream = $soapWebRequest.GetRequestStream()
-        $SOAPRequest.Save($requestStream)
-        $requestStream.Close()
+  write-host "Initiating Send."
+  $requestStream = $soapWebRequest.GetRequestStream()
+  $SOAPRequest.Save($requestStream)
+  $requestStream.Close()
 
-        write-host "Send Complete, Waiting For Response."
-        $resp = $soapWebRequest.GetResponse()
-        $responseStream = $resp.GetResponseStream()
-        $soapReader = [System.IO.StreamReader]($responseStream)
-        $ReturnXml = [Xml] $soapReader.ReadToEnd()
-        $responseStream.Close()
+  write-host "Send Complete, Waiting For Response."
+  $resp = $soapWebRequest.GetResponse()
+  $responseStream = $resp.GetResponseStream()
+  $soapReader = [System.IO.StreamReader]($responseStream)
+  $ReturnXml = [Xml] $soapReader.ReadToEnd()
+  $responseStream.Close()
 
-        write-host "Response Received."
+  write-host "Response Received."
 
-        $Return = $ReturnXml.Envelope.InnerText
-        return $Return
+  $Return = $ReturnXml.Envelope.InnerText
+  return $Return
 }
 
 function Send-SOAPRequestFromFile
 (
-        [String] $SOAPRequestFile,
-        [String] $URL
+  [String] $SOAPRequestFile,
+  [String] $URL
 )
 {
-        write-host "Reading and converting file to XmlDocument: $SOAPRequestFile"
-        $SOAPRequest = [Xml](Get-Content $SOAPRequestFile)
+  write-host "Reading and converting file to XmlDocument: $SOAPRequestFile"
+  $SOAPRequest = [Xml](Get-Content $SOAPRequestFile)
 
-        return $(Execute-SOAPRequest $SOAPRequest $URL)
+  return $(Execute-SOAPRequest $SOAPRequest $URL)
 }
 
 # Read in the metadata.
