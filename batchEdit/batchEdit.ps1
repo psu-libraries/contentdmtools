@@ -1,14 +1,41 @@
 # Powershell script to process metadata changes into SOAP XML and feeding it to CONTENTdm Catcher.
-# Nathan Tallman. Started August 2018, heavily refactored in May 2019.
+# Nathan Tallman. Created in August 2018, heavily refactored in May 2019.
 
 # Read in the metadata changes with -csv path, pass the collection alias with -alias collectionAlias.
 param (
     [string]$csv = "metadata.csv",
     [Parameter(Mandatory=$true)][string]$alias = $(Throw "Use -alias to specify a collection.")
  )
-# Setup timestamps and global variables
+
+# Setup timestamps
 function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
-# SOAP Functions # https://ponderingthought.com/2010/01/17/execute-a-soap-request-from-powershell/
+
+# Setup logs
+If(!(Test-Path logs)) {New-Item -ItemType Directory -Path logs | Out-Null }
+$log = ("logs/" + $alias + '_batchEdit_' + $(Get-Date -Format yyyyMMddTHHmmssffff) + "_log.txt")
+
+# Setup credentials. Securely store the user, password and license on local machine so they don't have to be entered everytime.
+## TODO: Combine this into one file saved in the root of batchEdit. https://git.psu.edu/digipres/contentdm/issues/1
+Write-Output "Checking for stored user settings, will prompt and store if not found."
+If(!(Test-Path settings)) {New-Item -ItemType Directory -Path settings | Out-Null }
+$user = If(Test-Path settings/user.txt) {Get-Content "settings/user.txt"} else { Read-Host "Enter the CONTENTdm user" }
+$user | Out-File settings/user.txt
+$password = If(Test-Path settings/securePassword.txt) { Get-Content "settings/securePassword.txt" | ConvertTo-SecureString }
+  else { Read-Host "Enter the CONTENTdm user password" -AsSecureString }
+$password | ConvertFrom-SecureString | Out-File "settings/securePassword.txt"
+$license = If(Test-Path settings/secureLicense.txt) { Get-Content "settings/secureLicense.txt" | ConvertTo-SecureString }
+  else { Read-Host "Enter the license for CONTENTdm" -AsSecureString }
+$license | ConvertFrom-SecureString | Out-File "settings/secureLicense.txt"
+
+$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+$pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+$BSTR = $null
+
+$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($license)
+$lc = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+$BSTR = $null
+
+# Setup SOAP functions # https://ponderingthought.com/2010/01/17/execute-a-soap-request-from-powershell/
 function Send-SOAPRequest
 (
         [Xml]    $SOAPRequest,
@@ -51,40 +78,16 @@ function Send-SOAPRequestFromFile
         return $(Execute-SOAPRequest $SOAPRequest $URL)
 }
 
-If(!(Test-Path logs)) {New-Item -ItemType Directory -Path logs | Out-Null }
-$log = ("logs/" + $alias + '_batchEdit_' + $(Get-Date -Format yyyyMMddTHHmmssffff) + "_log.txt")
-
-# Store the user, password and license on local machine so don't have to be entered everytime.
-# TODO: Combine this into one file saved in the root of batchEdit. https://git.psu.edu/digipres/contentdm/issues/1
-Write-Output "Checking for stored user settings, will prompt and store if not found."
-If(!(Test-Path settings)) {New-Item -ItemType Directory -Path settings | Out-Null }
-$user = If(Test-Path settings/user.txt) {Get-Content "settings/user.txt"} else { Read-Host "Enter the CONTENTdm user" }
-$user | Out-File settings/user.txt
-$password = If(Test-Path settings/securePassword.txt) { Get-Content "settings/securePassword.txt" | ConvertTo-SecureString }
-  else { Read-Host "Enter the CONTENTdm user password" -AsSecureString }
-$password | ConvertFrom-SecureString | Out-File "settings/securePassword.txt"
-$license = If(Test-Path settings/secureLicense.txt) { Get-Content "settings/secureLicense.txt" | ConvertTo-SecureString }
-  else { Read-Host "Enter the license for CONTENTdm" -AsSecureString }
-$license | ConvertFrom-SecureString | Out-File "settings/secureLicense.txt"
-
-$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
-$pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-$BSTR = $null
-
-$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($license)
-$lc = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-$BSTR = $null
-
 # Read in the metadata.
+## TODO: Pull out objects and send them as SOAP first, then send item SOAP https://git.psu.edu/digipres/contentdm/issues/2
 Write-Output "$(Get-Timestamp) Processing metadata edits into SOAP XML for catcher..." | Tee-Object -Filepath $log
 Write-Output "---------------------" | Out-File -Filepath $log -Append
 $metadata = Import-Csv -Path "$csv"
 $headers = ($metadata[0].psobject.Properties).Name
 
-## TODO: Pull out objects and send them as SOAP first, then send item SOAP https://git.psu.edu/digipres/contentdm/issues/2
 
+# Build and send the SOAP XML to CONTENTdm Catcher
 ForEach ($record in $metadata) {
-# Build the SOAP XML
 $SOAPRequest = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v6="http://catcherws.cdm.oclc.org/v6.0.0/">' + "`r`n"
 $SOAPRequest += "`t<soapenv:Header/>`r`n"
 $SOAPRequest += "`t<soapenv:Body>`r`n"
@@ -117,7 +120,7 @@ Write-Output "  $(Get-Timestamp) SOAP XML created for $soap, sending it to Catch
   Try {
     Send-SOAPRequest $SOAPRequest https://worldcat.org/webservices/contentdm/catcher?wsdl | Tee-Object -Filepath $log -Append
     Write-Output $Return | Tee-Object -Filepath $log -Append
-    ## DEBUGGING Comment out the Send-SOAPRequest and remove the comment from the line below to log soap. PASSWORDS EXPOSED
+    # DEBUGGING: Comment out the Send-SOAPRequest and remove the comment from the line below to log soap. WARNING PASSWORDS EXPOSED
     #Write-Output $SOAPRequest | Out-File -FilePath $soap
   }
   Catch {
@@ -129,7 +132,7 @@ Write-Output "  $(Get-Timestamp) SOAP XML created for $soap, sending it to Catch
   }
 }
 
-## TODO: Add searching log for errors and reporting back. https://git.psu.edu/digipres/contentdm/issues/3
+## TODO: Searching log for errors and report back, color coded. https://git.psu.edu/digipres/contentdm/issues/3
 Write-Output "---------------------" | Out-File -Filepath $log -Append
 Write-Host "$(Get-Timestamp) Batch metadata changes are complete."
 Write-Output "$(Get-Timestamp) Batch metadata changes are complete." | Out-File -Filepath $log -Append
