@@ -103,8 +103,8 @@ $createBatchButton.Add_Click({
     getArguments
     $script = ".\batchLoad\batchLoadCreate.ps1"
     $global:arguments = "$imageProc $tifProc"
-    Write-Host "Start-Process $script $arguments"
-    #Start-Process $script $arguments
+    #Write-Host "Start-Process $script $arguments"
+    Start-Process $script $arguments
  })
 
  $CONTENTdmTools.ShowDialog()
