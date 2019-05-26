@@ -13,7 +13,7 @@ Param(
 
 # Setup timestamps and global variables
 function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
-$batch = $PSScriptRoot | Split-Path -Leaf
+$batch = $source | Split-Path -Leaf
 $log = ("$source\$batch" + "_cdmPrep_log.txt")
 
 # Read in the metadata data.
