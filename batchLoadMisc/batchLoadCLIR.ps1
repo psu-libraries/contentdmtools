@@ -15,7 +15,7 @@ $log = ($batch + "_cdmPrep_log.txt")
 Write-Output "$(Get-Timestamp) CLIR CONTENTdm Prep Starting." | Tee-Object -file $log
 
 # Read in the metadata and setup array for each object
-$metadata = Import-Csv -Delimiter "`t" -Path metadata.txt 
+$metadata = Import-Csv -Path metadata.csv
 $directories = $metadata | Group-Object -AsHashTable -AsString -Property Directory
 
 # Establish loop for each object directory 
