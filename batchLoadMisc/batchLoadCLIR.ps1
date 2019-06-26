@@ -23,7 +23,7 @@ ForEach ($directory in $directories.keys)
 {
   # Create object metadata txt in each object directory
   Write-Output "Entering $directory for processing." | Tee-Object -file $log -Append
-  $directories.$directory | Select-Object Title,"Alternative Title",Creator,Recipient,"Date Created",Genre,"Physical Description",Subject,Location,"Time Period",Notes,Language,Identifier,"Box and Folder",Collection,Series,Repository,"Finding Aid","Rights Statement","Resource Type",Cataloger,"Date Cataloged","File Name" -ExcludeProperty Level,Directory | Export-Csv -Delimiter "`t" -Path $directory\$directory.txt -NoTypeInformation -Encoding UTF8 | Tee-Object -file $log -Append
+  $directories.$directory | Select-Object Title,"Alternative Title",Creator,Recipient,"Date Created",Genre,"Physical Description",Subject,Location,"Time Period",Notes,Language,Identifier,"Box and Folder",Collection,Series,Repository,"Finding Aid","Rights Statement","Resource Type",Cataloger,"Date Cataloged","File Name" -ExcludeProperty Level,Directory | Export-Csv -Delimiter "`t" -Path $directory\$directory.txt -NoTypeInformation | Tee-Object -file $log -Append
   Write-Output "    $(Get-Timestamp) Object metadata has been broken up into the the Directory Structure." | Tee-Object -file $log -Append
 
   # split object PDFs and move complete PDF to tmp directory
@@ -45,7 +45,7 @@ ForEach ($directory in $directories.keys)
   Get-ChildItem *.jp2 -Path $directory | ForEach-Object {
     $row = "{0}`t{1}`t{2}`t{3}`t{4}`t{5}`t{6}`t{7}`t{8}`t{9}`t{10}`t{11}`t{12}`t{13}`t{14}`t{15}`t{16}`t{17}`t{18}`t{19}`t{20}`t{21}`t{22}" -f """Page $i""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""" ,"""""", """""", """""", """""", """""", """""", """""", """""", """""", $_
     [array]$item = $row
-    $item | Out-File $directory\$directory.txt -Append -Encoding UTF8
+    $item | Out-File $directory\$directory.txt -Append
     $i++
   }
   Write-Output "    $(Get-Timestamp) Page item metadata has been added." | Tee-Object -file $log -Append
