@@ -1,7 +1,7 @@
 # batchLoadCreate.ps1 
 # Nathan Tallman, Created in August 2018, updated in November 2018
-# Modified in April 2019 for CLIR grant; updated 10 May 2019, 18 June 2019.
-# https://git.psu.edu/digipres/contentdm/edit/master/batchLoad
+# Modified in April 2019 for CLIR grant; updated 28 June 2019.
+# https://git.psu.edu/digipres/contentdm/blob/master/batchLoadMisc/
 # this is fragile, only works for this collection as of this date, will break if the number of fields change. This could probably be refactored to read number of fields and generate stuff as needed?
 
 ## Dependencies
@@ -13,6 +13,17 @@ function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
 $batch = $PSScriptRoot | Split-Path -Leaf
 $log = ($batch + "_cdmPrep_log.txt")
 Write-Output "$(Get-Timestamp) CLIR CONTENTdm Prep Starting." | Tee-Object -file $log
+
+# Functions
+Function Format-FileSize() {
+    Param ([int]$size)
+    If ($size -gt 1TB) {[string]::Format("{0:0.00} TB", $size / 1TB)}
+    ElseIf ($size -gt 1GB) {[string]::Format("{0:0.00} GB", $size / 1GB)}
+    ElseIf ($size -gt 1MB) {[string]::Format("{0:0.00} MB", $size / 1MB)}
+    ElseIf ($size -gt 1KB) {[string]::Format("{0:0.00} kB", $size / 1KB)}
+    ElseIf ($size -gt 0) {[string]::Format("{0:0.00} B", $size)}
+    Else {""}
+}
 
 # Read in the metadata and setup array for each object
 $metadata = Import-Csv -Path metadata.csv
@@ -35,8 +46,9 @@ ForEach ($directory in $directories.keys)
   
   # Add PDF to item metadata
   $pdfname = "$directory.pdf"
-  $pdfrow = "{0}`t{1}`t{2}`t{3}`t{4}`t{5}`t{6}`t{7}`t{8}`t{9}`t{10}`t{11}`t{12}`t{13}`t{14}`t{15}`t{16}`t{17}`t{18}`t{19}`t{20}`t{21}`t{22}" -f """Complete PDF""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""" ,"""""", """""", """""", """""", """""", """""", """""", """""", """""", $pdfname
-  $pdfrow | Out-File $directory\$directory.txt -Append -Encoding UTF8
+  $size = Format-FileSize((Get-Item $directory\tmp\$pdfname).length)
+  $pdfrow = "{0}`t{1}`t{2}`t{3}`t{4}`t{5}`t{6}`t{7}`t{8}`t{9}`t{10}`t{11}`t{12}`t{13}`t{14}`t{15}`t{16}`t{17}`t{18}`t{19}`t{20}`t{21}`t{22}" -f """Complete PDF ($size)""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""" ,"""""", """""", """""", """""", """""", """""", """""", """""", """""", $pdfname
+  $pdfrow | Out-File $directory\$directory.txt -Append
   Write-Output "    $(Get-Timestamp) PDF item metadata has been added." | Tee-Object -file $log -Append
     
   # Add item metadata to metadata txt, including file names and seqential titles (Page 1, Page 2, etc.)
