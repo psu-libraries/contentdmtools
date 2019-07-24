@@ -1,6 +1,6 @@
 # batchLoadCreate.ps1 
-# Nathan Tallman, Created in August 2018, updated in November 2018
-# Modified in April 2019 for CLIR grant; updated 28 June 2019.
+# Nathan Tallman, Created in August 2018
+# Modified in April 2019 for CLIR grant; updated 24 July 2019.
 # https://git.psu.edu/digipres/contentdm/blob/master/batchLoadMisc/
 # this is fragile, only works for this collection as of this date, will break if the number of fields change. This could probably be refactored to read number of fields and generate stuff as needed?
 
@@ -44,12 +44,12 @@ ForEach ($directory in $directories.keys)
   Move-Item $directory\$directory.pdf -Destination $directory\tmp | Tee-Object -file $log -Append
   Write-Output "    $(Get-Timestamp) PDF split into pages." | Tee-Object -file $log -Append
   
-  # Add PDF to item metadata
+<#   # Add PDF to item metadata
   $pdfname = "$directory.pdf"
   $size = Format-FileSize((Get-Item $directory\tmp\$pdfname).length)
   $pdfrow = "{0}`t{1}`t{2}`t{3}`t{4}`t{5}`t{6}`t{7}`t{8}`t{9}`t{10}`t{11}`t{12}`t{13}`t{14}`t{15}`t{16}`t{17}`t{18}`t{19}`t{20}`t{21}`t{22}" -f """Complete PDF ($size)""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""" ,"""""", """""", """""", """""", """""", """""", """""", """""", """""", $pdfname
-  $pdfrow | Out-File $directory\$directory.txt -Append
-  Write-Output "    $(Get-Timestamp) PDF item metadata has been added." | Tee-Object -file $log -Append
+  $pdfrow | Out-File $directory\$directory.txt -Append -Encoding UTF8
+  Write-Output "    $(Get-Timestamp) PDF item metadata has been added." | Tee-Object -file $log -Append #>
     
   # Add item metadata to metadata txt, including file names and seqential titles (Page 1, Page 2, etc.)
   # Refactor to dynamically read headers and generate row 
@@ -57,7 +57,7 @@ ForEach ($directory in $directories.keys)
   Get-ChildItem *.jp2 -Path $directory | ForEach-Object {
     $row = "{0}`t{1}`t{2}`t{3}`t{4}`t{5}`t{6}`t{7}`t{8}`t{9}`t{10}`t{11}`t{12}`t{13}`t{14}`t{15}`t{16}`t{17}`t{18}`t{19}`t{20}`t{21}`t{22}" -f """Page $i""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""", """""" ,"""""", """""", """""", """""", """""", """""", """""", """""", """""", $_
     [array]$item = $row
-    $item | Out-File $directory\$directory.txt -Append
+    $item | Out-File $directory\$directory.txt -Append -Encoding UTF8
     $i++
   }
   Write-Output "    $(Get-Timestamp) Page item metadata has been added." | Tee-Object -file $log -Append
