@@ -1,63 +1,138 @@
-# Powershell script to process metadata changes in a single data table to a list of per-record field changes for CONTENTdm Catcher, via Pitcher. https://github.com/little9/pitcher
-# Nathan Tallman, August 2018
+# Powershell script to process metadata changes into SOAP XML and feeding it to CONTENTdm Catcher.
+# Nathan Tallman. Created in August 2018, heavily refactored in May 2019.
 
-# Read in the metadata changes with -csv path, pass the collection allias with -alias alias. 
+# Read in the metadata changes with -csv path, pass the collection alias with -alias collectionAlias.
 param (
     [string]$csv = "metadata.csv",
-    [Parameter(Mandatory=$true)][string]$alias = $( Read-Host "Input the collection alias, please." )
+    [Parameter(Mandatory=$true)][string]$alias = $(Throw "Use -alias to specify a collection.")
  )
 
-# Setup timestamps and global variables
+# Setup timestamps
 function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
-$batch = $PSScriptRoot | Split-Path -Leaf
-$log = ($batch + "_metadataBatchEdit_log.txt")
 
-Write-Output "$(Get-Timestamp) Metadata windup starting by reading in the data table of edited metadata." | Tee-Object -Filepath $log
+# Setup logs
+If(!(Test-Path logs)) {New-Item -ItemType Directory -Path logs | Out-Null }
+$log = ("logs/" + $alias + '_batchEdit_' + $(Get-Date -Format yyyyMMddTHHmmssffff) + "_log.txt")
 
-# Read in the metadata data.
+# Setup credentials. Securely store the user, password and license on local machine so they don't have to be entered everytime.
+## TODO: Combine this into one file saved in the root of batchEdit. https://git.psu.edu/digipres/contentdm/issues/1
+Write-Output "Checking for stored user settings, will prompt and store if not found."
+If(!(Test-Path settings)) {New-Item -ItemType Directory -Path settings | Out-Null }
+$user = If(Test-Path settings/user.txt) {Get-Content "settings/user.txt"} else { Read-Host "Enter the CONTENTdm user" }
+$user | Out-File settings/user.txt
+$password = If(Test-Path settings/securePassword.txt) { Get-Content "settings/securePassword.txt" | ConvertTo-SecureString }
+  else { Read-Host "Enter the CONTENTdm user password" -AsSecureString }
+$password | ConvertFrom-SecureString | Out-File "settings/securePassword.txt"
+$license = If(Test-Path settings/secureLicense.txt) { Get-Content "settings/secureLicense.txt" | ConvertTo-SecureString }
+  else { Read-Host "Enter the license for CONTENTdm" -AsSecureString }
+$license | ConvertFrom-SecureString | Out-File "settings/secureLicense.txt"
+
+$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+$pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+$BSTR = $null
+
+$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($license)
+$lc = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+$BSTR = $null
+
+# Setup SOAP functions # https://ponderingthought.com/2010/01/17/execute-a-soap-request-from-powershell/
+function Send-SOAPRequest
+(
+  [Xml] $SOAPRequest,
+  [String] $URL
+)
+{
+  write-host "Sending SOAP Request To Server: $URL"
+  $soapWebRequest = [System.Net.WebRequest]::Create($URL)
+  $soapWebRequest.ContentType = 'text/xml;charset="utf-8"'
+  $soapWebRequest.Accept      = "text/xml"
+  $soapWebRequest.Method      = "POST"
+
+  write-host "Initiating Send."
+  $requestStream = $soapWebRequest.GetRequestStream()
+  $SOAPRequest.Save($requestStream)
+  $requestStream.Close()
+
+  write-host "Send Complete, Waiting For Response."
+  $resp = $soapWebRequest.GetResponse()
+  $responseStream = $resp.GetResponseStream()
+  $soapReader = [System.IO.StreamReader]($responseStream)
+  $ReturnXml = [Xml] $soapReader.ReadToEnd()
+  $responseStream.Close()
+
+  write-host "Response Received."
+
+  $Return = $ReturnXml.Envelope.InnerText
+  return $Return
+}
+
+function Send-SOAPRequestFromFile
+(
+  [String] $SOAPRequestFile,
+  [String] $URL
+)
+{
+  write-host "Reading and converting file to XmlDocument: $SOAPRequestFile"
+  $SOAPRequest = [Xml](Get-Content $SOAPRequestFile)
+
+  return $(Execute-SOAPRequest $SOAPRequest $URL)
+}
+
+# Read in the metadata.
+## TODO: Pull out objects and send them as SOAP first, then send item SOAP https://git.psu.edu/digipres/contentdm/issues/2
+Write-Output "$(Get-Timestamp) Processing metadata edits into SOAP XML for catcher..." | Tee-Object -Filepath $log
+Write-Output "---------------------" | Out-File -Filepath $log -Append
 $metadata = Import-Csv -Path "$csv"
 $headers = ($metadata[0].psobject.Properties).Name
 
-# add action column, assume all edits for now. add will add will create a null record, delete will delete a record.
 
-# Write the headers
-Write-Output "cdmnumber,field,value,collection,action" | Out-File -FilePath tmp.csv
-
-# Find the changes and write out the row
+# Build and send the SOAP XML to CONTENTdm Catcher
 ForEach ($record in $metadata) {
-  Foreach ($header in $headers) {      
-    Foreach ($data in $record.$header) {
-      If ($data) {
-        Write-Output ($record.cdmnumber + ","  + "$header"+ ',"'  + "$data"  +  '",' + "$alias" + "," + "edit")  | Out-File -FilePath tmp.csv -Append
-      } 
+$SOAPRequest = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v6="http://catcherws.cdm.oclc.org/v6.0.0/">' + "`r`n"
+$SOAPRequest += "`t<soapenv:Header/>`r`n"
+$SOAPRequest += "`t<soapenv:Body>`r`n"
+$SOAPRequest += "`t`t<v6:processCONTENTdm>`r`n"
+$SOAPRequest += "`t`t`t<action>edit</action>`r`n"
+$SOAPRequest += "`t`t`t<cdmurl>http://server17287.contentdm.oclc.org:8888</cdmurl>`r`n"
+$SOAPRequest += "`t`t`t<username>$user</username>`r`n"
+$SOAPRequest += "`t`t`t<password>$pw</password>`r`n"
+$SOAPRequest += "`t`t`t<license>$lc</license>`r`n"
+$SOAPRequest += "`t`t`t<collection>$alias</collection>`r`n"
+$SOAPRequest += "`t`t`t`t<metadata>`r`n"
+$SOAPRequest += "`t`t`t`t`t<metadataList>`r`n"
+  ForEach ($header in $headers) {
+    $SOAPRequest += "`t`t`t`t`t`t<metadata>`r`n"
+    ForEach ($data in $record.$header) {
+      $SOAPRequest += "`t`t`t`t`t`t`t<field>" + $header + "</field>`r`n"
+      $SOAPRequest += "`t`t`t`t`t`t`t<value>" + $data + "</value>`r`n"
     }
+    $SOAPRequest += "`t`t`t`t`t`t</metadata>`r`n"
+  }
+$SOAPRequest += "`t`t`t`t`t</metadataList>`r`n"
+$SOAPRequest += "`t`t`t`t</metadata>`r`n"
+$SOAPRequest += "`t`t</v6:processCONTENTdm>`r`n"
+$SOAPRequest += "`t</soapenv:Body>`r`n"
+$SOAPRequest += "</soapenv:Envelope>"
+
+$soap = "logs/soap_" + $alias+ "_" + $record.dmrecord + ".xml"
+
+Write-Output "  $(Get-Timestamp) SOAP XML created for $soap, sending it to Catcher..." | Tee-Object -Filepath $log -Append
+  Try {
+    Send-SOAPRequest $SOAPRequest https://worldcat.org/webservices/contentdm/catcher?wsdl | Tee-Object -Filepath $log -Append
+    Write-Output $Return | Tee-Object -Filepath $log -Append
+    # DEBUGGING: Comment out the Send-SOAPRequest and remove the comment from the line below to log soap. WARNING PASSWORDS EXPOSED
+    #Write-Output $SOAPRequest | Out-File -FilePath $soap
+  }
+  Catch {
+    Write-Host "ERROR ERROR ERROR" -Fore "red"
+    Write-Output $Return | Tee-Object -Filepath $log -Append
+    Write-Output "---------------------" | Out-File -Filepath $log -Append
+    Write-HOST "  $(Get-Timestamp) ERROR: Script halted without completing." -Fore "red"
+    Write-Output "  $(Get-Timestamp) ERROR: Script halted without completing." | Out-File -Filepath $log -Append
   }
 }
 
-# Break the CSV's apart by field for per-record processing.
-ForEach ($header in $headers) {
- Import-Csv tmp.csv | Sort-Object * -Unique | Where {$_.field -eq "$header"} | Where {$_.field -ne "cdmnumber"} | Export-Csv ("metadata_edited_" + $header + ".csv") -NoTypeInformation
-}
-
-Remove-Item tmp.csv
-Remove-Item metadata_edited_cdmnumber.csv
-
-Write-Output "$(Get-Timestamp) Metadata changes have now been broken up by field, per record. Pitcher will now throw each individual csv of field/record changes to Catcher. You will need to confirm indexing of each csv before pitching the next one as Catcher will only make one field change per record at a a time." | Tee-Object -Filepath $log -Append
-
-If(!(Test-Path logs)) {New-Item -ItemType Directory -Path logs | Out-Null }
-
-Get-ChildItem -Filter metadata_edited_* | ForEach {
-  pitcher --csv $_.FullName --settings settings.yml
-  Read-Host -Prompt "Press any key and ENTER to continue when $_ been fully indexed or the items unlocked. Unless this was the last CSV, the next one will not pitch until $_ is unlocked or indexed. You can also press CTRL+C to quit."
-}
-Write-Output "" | Out-File -Filepath $log -Append
+## TODO: Searching log for errors and report back, color coded. https://git.psu.edu/digipres/contentdm/issues/3
 Write-Output "---------------------" | Out-File -Filepath $log -Append
-Write-Output "---------------------" | Out-File -Filepath $log -Append
-Write-Output "-Starting Pitcher Log-" | Out-File -Filepath $log -Append
-Add-Content $log -Value (Get-Content "logs/response-*.txt")
-Write-Output "---------------------" | Out-File -Filepath $log -Append
-Write-Output "---------------------" | Out-File -Filepath $log -Append
-Write-Output "-Ending Pitcher Log-" | Out-File -Filepath $log -Append
-Write-Output "" | Out-File -Filepath $log -Append
-Remove-Item logs -Recurse
-Write-Output "$(Get-Timestamp) Batch metadata changes are complete!" | Tee-Object -Filepath $log -Append
+Write-Host "$(Get-Timestamp) Batch metadata changes are complete."
+Write-Output "$(Get-Timestamp) Batch metadata changes are complete." | Out-File -Filepath $log -Append
