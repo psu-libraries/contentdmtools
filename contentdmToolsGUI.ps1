@@ -34,8 +34,7 @@ $processor.Font = 'Microsoft Sans Serif,10'
 
 $deleteTIFF = New-Object system.Windows.Forms.CheckBox
 $deleteTIFF.text = "Delete TIFFs"
-$deleteTIFF.AutoSize = $false
-$deleteTIFF.width = 100
+$deleteTIFF.width = 120
 $deleteTIFF.height = 20
 $deleteTIFF.location = New-Object System.Drawing.Point(141, 12)
 $deleteTIFF.Font = 'Microsoft Sans Serif,10'
@@ -47,7 +46,7 @@ $batchEditPanel.location = New-Object System.Drawing.Point(340, 12)
 
 $aliasInput = New-Object system.Windows.Forms.TextBox
 $aliasInput.multiline = $false
-$aliasInput.text = "Collection Alias"
+$aliasInput.text = "collectionAlias"
 $aliasInput.width = 150
 $aliasInput.height = 20
 $aliasInput.location = New-Object System.Drawing.Point(13, 9)
@@ -82,7 +81,7 @@ $batchPathButton.ForeColor = "#ffffff"
 
 $batchPathTextBox = New-Object system.Windows.Forms.TextBox
 $batchPathTextBox.multiline = $false
-$batchPathTextBox.text = "C:\path\to\batch"
+$batchPathTextBox.text = "E:\path\to\batch"
 $batchPathTextBox.width = 255
 $batchPathTextBox.height = 20
 $batchPathTextBox.location = New-Object System.Drawing.Point(9, 44)
@@ -113,7 +112,7 @@ $createBatchVendedPanelLabel.ForeColor = "#1e407c"
 
 $batchVendedPathTextBox = New-Object system.Windows.Forms.TextBox
 $batchVendedPathTextBox.multiline = $false
-$batchVendedPathTextBox.text = "C:\path\to\batch"
+$batchVendedPathTextBox.text = "E:\path\to\batch"
 $batchVendedPathTextBox.width = 255
 $batchVendedPathTextBox.height = 20
 $batchVendedPathTextBox.location = New-Object System.Drawing.Point(9, 9)
@@ -173,18 +172,28 @@ $versionLabel.location = New-Object System.Drawing.Point(31, 442)
 $versionLabel.Font = 'Microsoft Sans Serif,10'
 
 $exitButton                      = New-Object system.Windows.Forms.Button
-$exitButton.BackColor            = "#e6005c"
+$exitButton.BackColor            = "#d0021b"
 $exitButton.text                 = "EXIT"
 $exitButton.width                = 80
 $exitButton.height               = 60
-$exitButton.location             = New-Object System.Drawing.Point(450,230)
+$exitButton.location             = New-Object System.Drawing.Point(500,230)
 $exitButton.Font                 = 'Microsoft Sans Serif,10,style=Bold'
 $exitButton.ForeColor            = "#ffffff"
 
+$cancelButton                    = New-Object system.Windows.Forms.Button
+$cancelButton.BackColor          = "#f5a623"
+$cancelButton.text               = "CANCEL"
+$cancelButton.width              = 80
+$cancelButton.height             = 60
+$cancelButton.location           = New-Object System.Drawing.Point(375,230)
+$cancelButton.Font               = 'Microsoft Sans Serif,10,style=Bold'
+$cancelButton.ForeColor          = "#ffffff"
+
 $createBatchPanel.controls.AddRange(@($createBatchButton, $processor, $deleteTIFF, $batchPathButton, $batchPathTextBox, $createBatchPanelLabel))
-$CONTENTdmTools.controls.AddRange(@($createBatchPanel, $batchEditPanel, $createBatchVendedPanel, $name, $versionLabel,$exitButton))
+$CONTENTdmTools.controls.AddRange(@($createBatchPanel, $batchEditPanel, $createBatchVendedPanel, $name, $versionLabel,$exitButton,$cancelButton))
 $batchEditPanel.controls.AddRange(@($aliasInput, $metadataInput, $batchEditButton, $batchEditLabel, $metadataPathButton))
 $createBatchVendedPanel.controls.AddRange(@($createBatchVendedPanelLabel, $batchVendedPathTextBox, $batchVendedPathButton, $createBatchVendedButton))
+
 function Get-Local-Arguments {
     If ($processor.Text -contains "ImageMagick") {
         $global:imageProc = '-im'
@@ -202,19 +211,6 @@ function Get-Local-Arguments {
     Else {
         $global:tifProc = $null
     }
-}
-
-function Get-Local-Arguments {
-    If ($processor.Text -contains "ImageMagick") {
-        $global:imageProc = '-im'
-    }
-    ElseIf ($processor.Text -contains "ABBYY") {
-        $global:imageProc = '-abbyy'
-    }
-    Else {
-        $global:imageProc = $null
-    }
-
 }
 
 function Find-Folders {
@@ -251,11 +247,11 @@ function Find-CSV {
 }
 
 $createBatchButton.Add_Click( {
-        Get-Local-Arguments
         $script = ".\batchLoad\batchLoadCreate.ps1"
-        $global:arguments = "$imageProc $tifProc -source " + '"' + $source + '"'
-        #Write-Host "Start-Process $script $arguments"
-        Start-Process $script $arguments
+        Get-Local-Arguments
+        $global:arguments = "$global:imageProc $global:tifProc -source " + '"' + $global:source + '"'
+        #Write-Host "$global:proc = Start-Process $script $global:arguments -PassThru"
+        $global:proc = Start-Process $script $global:arguments -PassThru
     })
 
 $batchPathButton.Add_Click( {
@@ -264,9 +260,9 @@ $batchPathButton.Add_Click( {
 
 $createBatchVendedButton.Add_Click( {
         $script = ".\batchLoadMisc\batchLoadCLIR.ps1"
-        $global:arguments = "-source " + '"' + $source + '"'
-        #Write-Host "Start-Process $script $arguments"
-        Start-Process $script $arguments
+        $global:arguments = "-source " + '"' + $global:source + '"'
+        #Write-Host "$global:proc = Start-Process $script $global:arguments -PassThru"
+        $global:proc = Start-Process $script $global:arguments -PassThru
     })
 
 $batchVendedPathButton.Add_Click( {
@@ -275,13 +271,17 @@ $batchVendedPathButton.Add_Click( {
 
 $batchEditButton.Add_Click( {
         $script = ".\batchEdit\batchEdit.ps1"
-        $global:arguments = "-csv " + '"' + $source + '"' + " -alias " + $aliasInput.text
-        #Write-Host "Start-Process $script $arguments"
-        Start-Process $script $arguments
+        $global:arguments = "-csv " + '"' + $global:source + '"' + " -alias " + $aliasInput.text
+        #Write-Host "$global:proc = Start-Process $script $global:arguments -PassThru"
+        $global:proc = Start-Process $script $global:arguments -PassThru
     })
 
 $metadataPathButton.Add_Click( {
         Find-CSV
+    })
+
+$cancelButton.Add_Click( {
+        Stop-Process -Id $global:proc.Id
     })
 
 $exitButton.Add_Click( {
