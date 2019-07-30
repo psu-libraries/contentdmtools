@@ -1,6 +1,6 @@
 # PowerShell Scripts for Batch Procesing on CONTENTdm
 
-  * [Batch loads of objects](https://git.psu.edu/digipres/contentdm/blob/master/batchLoadCreate.md)
+  * [Batch loads of objects](batchCreateCompoundObjects.md)
   * [Batch loads of objects, alternative workflows](https://git.psu.edu/digipres/contentdm/tree/master/batchLoadMisc)
   * [Batch editing items](https://git.psu.edu/digipres/scripts/tree/master/contentdm/batchEdit)
   * [Batch re-OCRing items](https://git.psu.edu/digipres/contentdm/tree/master/batchReOCR)
