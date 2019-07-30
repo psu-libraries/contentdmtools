@@ -50,7 +50,8 @@ ForEach ($object in $objects.keys) {
     $o++
     Write-Output "$(Get-Timestamp) Starting $object ($o of $($objects.Count) objects)." 2>&1  | Tee-Object -file $log -Append
     if (!(Test-Path $path\$object)) { New-Item -ItemType Directory -Path $path\$object | Out-Null }
-    $objects.$object | Export-Csv -Delimiter "`t" -Path $path\$object\$object.txt -NoTypeInformation
+    $objects.$object | Select-Object * -ExcludeProperty Directory | Export-Csv -Delimiter "`t" -Path $path\$object\$object.txt -NoTypeInformation
+    Write-Output "        Object metadata for has been broken up into the the Directory Structure." | Tee-Object -file $log -Append
     Set-Location $path\$object 2>&1  | Tee-Object -file $log -Append
     $tiffs = (Get-ChildItem *.tif* -Recurse).Count
     # Find the TIF files, convert them to JP2, and move them to a scans subdirectory within the object.
@@ -60,14 +61,28 @@ ForEach ($object in $objects.keys) {
     Write-Output "        TIF to JP2 conversion starting..." 2>&1  | Tee-Object -file $log -Append
     Get-ChildItem *.tif* -Recurse | ForEach-Object {
         $i++
-        Write-Output "        Converting $($_.Basename) ($i of $tiffs)" 2>&1  | Tee-Object -file $log -Append
+        Write-Output "        Converting $($_.Basename) ($i of $tiffs)." 2>&1  | Tee-Object -file $log -Append
         Invoke-Expression "$gm convert $($_.Name) source.icc" 2>&1  | Tee-Object -file $log -Append
         Invoke-Expression "$gm convert $($_.Name) -profile source.icc -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe scans\$($_.BaseName).jp2" 2>&1  | Tee-Object -file $log -Append
         Remove-Item source.icc 2>&1  | Tee-Object -file $log -Append
     } 
     $jp2s = (Get-ChildItem *.jp2 -Recurse -Path scans).Count
     Write-Output "        $object TIF conversion complete: $tiffs TIFs and $jp2s JP2s. $(Get-Timestamp)" 2>&1  | Tee-Object -file $log -Append
-    
+
+    # Append item metadata to metadata.txt
+    $f = 1
+    Get-ChildItem *.jp2 -Recurse -Path scans | ForEach-Object {
+        $objcsv = Import-Csv -Delimiter "`t" -Path $path\$object\$object.txt
+        $row = @()
+        $row += ('"Item ' + $f + ' of ' + $jp2s + '"')
+        foreach ($field in ($objcsv | Select-Object * -ExcludeProperty Title,"File Name" | get-member -type NoteProperty)) { $row += ('""') }
+        $row += ("$_") 
+        $item = $row -join "`t"
+        Write-Output $item | Out-File $path\$object\$object.txt -Append -Encoding UTF8
+        $f++
+    }
+    Write-Output "        Item metadata has been added to $object.txt." 2>&1  | Tee-Object -file $log -Append
+
     # OCR, TXT and PDF
     $i = 0
     if ($ocr -match "both") {
@@ -75,7 +90,7 @@ ForEach ($object in $objects.keys) {
         if (!(Test-Path transcripts)) { New-Item -ItemType Directory -Path transcripts | Out-Null }
         Get-ChildItem *.tif* -Recurse | ForEach-Object {
             $i++ 
-            Write-Output "        Converting $($_.Basename) ($i of $tiffs)" 2>&1  | Tee-Object -file $log -Append
+            Write-Output "        Converting $($_.Basename) ($i of $tiffs)." 2>&1  | Tee-Object -file $log -Append
             Invoke-Expression "$tesseract $($_.FullName) transcripts\$($_.BaseName) txt pdf quiet" 2>&1  | Tee-Object -file $log -Append
         }
         Set-Location transcripts 2>&1  | Tee-Object -file $log -Append
@@ -93,7 +108,7 @@ ForEach ($object in $objects.keys) {
         if (!(Test-Path transcripts)) { New-Item -ItemType Directory -Path transcripts | Out-Null }
         Get-ChildItem *.tif* -Recurse | ForEach-Object {
             $i++
-            Write-Output "        Converting $($_.Basename) ($i of $tiffs)" 2>&1  | Tee-Object -file $log -Append
+            Write-Output "        Converting $($_.Basename) ($i of $tiffs)." 2>&1  | Tee-Object -file $log -Append
             Invoke-Expression "$tesseract $($_.FullName) transcripts\$($_.BaseName) txt quiet" 2>&1  | Tee-Object -file $log -Append
         }
         $txts = (Get-ChildItem *.txt -Recurse -Path transcripts).Count
@@ -102,7 +117,7 @@ ForEach ($object in $objects.keys) {
         Write-Output "        OCR (PDF conversion) starting..." 2>&1  | Tee-Object -file $log -Append
         Get-ChildItem *.tif* -Recurse | ForEach-Object {
             $i++
-            Write-Output "        Converting $($_.Basename) ($i of $tiffs)" 2>&1  | Tee-Object -file $log -Append
+            Write-Output "        Converting $($_.Basename) ($i of $tiffs)." 2>&1  | Tee-Object -file $log -Append
             Invoke-Expression "$tesseract $($_.FullName) $($_.BaseName) pdf quiet" 2>&1  | Tee-Object -file $log -Append
         }
         (Get-ChildItem *.pdf).Name > list.txt

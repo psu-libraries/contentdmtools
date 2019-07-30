@@ -3,10 +3,10 @@ CONTENTdm's [Directory Structure](https://help.oclc.org/Metadata_Services/CONTEN
 
 This script will take
 * a directory containing subdirectories for each compound object, each containing TIF images,
-* a metadata CSV file called `metadata.csv`,
+* a metadata CSV file called `metadata.csv` that contains compound object-level metadata,
 
 and create within each compound object subdirectory
-* a tab-delimited text file of compound object-level metadata, and
+* a tab-delimited text file of compound object-level metadata and item-level metadata for each image, and
 * JP2 images for every TIF image using [GraphicsMagick](http://www.graphicsmagick.org/), saved in a `scans` subdirectory.
 
 With the correct parameters, the it can also
@@ -23,9 +23,10 @@ With the correct parameters, the it can also
     * Metadata may first be created using Excel or another progam and converted to CSV.
     * Always use UTF-8 character encoding when editing and saving.
     * All fields from the collections Field Properties need to be present and conform to any data types or other validations.
-    * **Two additional fields will need to be added as the first two columns.**
-      * `Directory`
-      * `File Name`
+      * `Title` should always be the first column. It will soon be the second when you add `Directory`.
+    * **Two additional fields will needed**
+      * `Directory` as the first column, followed by `Title`. This should contain the name of the subdirectory where the compound object files are stored in the batch directory.
+      * `File Name` as the last column.
 4. Open PowerShell and navigate to where [contentdm-tools](https://github.com/psu-libraries/contentdmtools) are saved. It may be easier to navigate to this folder using Windows File Explorer and hold the shift key while right-clicking to select "Open PowerShell window here."
 5. Use the command `batchCreateCompoundObjects.ps1 -path C:\path\to\batch` to process batch of compound objects. By default, only metadata and images are processed. You can use the following parameters as well.
      * `-ocr` to run Tesseract and tell it what to do.
@@ -43,7 +44,7 @@ With the correct parameters, the it can also
 3. Choose the appropriate compound object type and browse to select the directory containing the batch.
 4. Confirm that images are saved in a `scans` subdirectory.
 5. **Do NOT have CONTENTdm generate display images** by choosing No.
-6. Label pages using a tab-delimited file and import `transcripts` from a directory (if using), and check the box to create a Print PDF if desired*.
+6. Label pages using a tab-delimited text file and import `transcripts` from a directory (if using), and check the box to create a Print PDF if desired*.
 7. Always check the field mappings for correctness!
 8. Upload the compound objects through Project Client.
 9. Approve and index the compound objects through the Administrative User Interface to add the compound objects to the collection.
