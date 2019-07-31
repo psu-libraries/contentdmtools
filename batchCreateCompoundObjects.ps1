@@ -12,11 +12,11 @@ Param(
 
     [Parameter()]
     [ValidateSet('both','text','pdf')]
-    [string]$ocr,
+    [string]$ocr = 'both',
 
     [Parameter()]
     [ValidateSet('keep','discard')]
-    [string]$originals,
+    [string]$originals = 'keep',
 
     [Parameter(Mandatory)]
     [string]$path = $(Throw "Use -path to specify a path to the files for the batch.")  
@@ -32,7 +32,16 @@ $batch = $path | Split-Path -Leaf
 $log = ($path + "\" + $batch + "_batchLoadCreate_log.txt")
 $pwd = $(Get-Location).Path
 $dirCount = (Get-ChildItem pst* -Directory -Path $path).Count
+
+# Functions
 function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
+function Convert-OCR($ocrText) {
+    (Get-Content $ocrText) | 
+    ForEach-Object {
+        $_ -replace '</', '' `
+           -replace '/>', ''
+    } | Set-Content $ocrText
+}
 
 Write-Output "----------------------------------------------" 2>&1  | Tee-Object -file $log
 Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Create Compound Objects Starting." 2>&1  | Tee-Object -file $log -Append
@@ -100,6 +109,10 @@ ForEach ($object in $objects.keys) {
         ForEach ($file in $files) { Remove-Item $file 2>&1  | Tee-Object -file $log -Append }
         Remove-Item list.txt 2>&1  | Tee-Object -file $log -Append
         Set-Location $path\$object 2>&1  | Tee-Object -file $log -Append
+        Get-ChildItem *.txt -Recurse -Path transcripts | ForEach-Object {
+            Convert-OCR -ocrText $_.FullName  2>&1  | Tee-Object -file $log -Append
+        }
+        Write-Output "        TXT transcripts have been sanitized for CONTENTdm." 2>&1  | Tee-Object -file $log -Append
         $txts = (Get-ChildItem *.txt -Recurse -Path transcripts).Count
         $pdfs = (Get-ChildItem *.pdf -Recurse).Count
         Write-Output "        $object OCR and PDF conversion complete: $tiffs TIFs, $txts TXTs, and $pdfs PDF. $(Get-Timestamp)" 2>&1  | Tee-Object -file $log -Append
@@ -111,6 +124,10 @@ ForEach ($object in $objects.keys) {
             Write-Output "        Converting $($_.Basename) ($i of $tiffs)." 2>&1  | Tee-Object -file $log -Append
             Invoke-Expression "$tesseract $($_.FullName) transcripts\$($_.BaseName) txt quiet" 2>&1  | Tee-Object -file $log -Append
         }
+        Get-ChildItem *.txt -Recurse -Path transcripts | ForEach-Object {
+            Convert-OCR -ocrText $_.FullName  2>&1  | Tee-Object -file $log -Append
+        }
+        Write-Output "        TXT transcripts have been sanitized for CONTENTdm." 2>&1  | Tee-Object -file $log -Append
         $txts = (Get-ChildItem *.txt -Recurse -Path transcripts).Count
         Write-Output "        $object OCR complete: $tiffs TIFs and $txts TXTs. $(Get-Timestamp)" 2>&1  | Tee-Object -file $log -Append
     } elseif ($ocr -match "pdf") {

@@ -8,12 +8,10 @@ This script will take
 and create within each compound object subdirectory
 * a tab-delimited text file of compound object-level metadata and item-level metadata for each image, and
 * JP2 images for every TIF image using [GraphicsMagick](http://www.graphicsmagick.org/), saved in a `scans` subdirectory.
-
-With the correct parameters, the it can also
 * run [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) to
-  * create TXT transcripts for every TIF image, saved in a `transcripts` subdirectory, and/or
-  * a 200 ppi searchable PDF for the entire compound object, saved in the compound object subdirectory; and
-* keep or discard the original TIF images, per local needs.
+  * create TXT transcripts for every TIF image, saved in a `transcripts` subdirectory, and
+  * create a 200 ppi searchable PDF for the entire compound object, saved in the compound object subdirectory; and
+* move TIF images into an `originals` subdirectory.
 
 ## Usage
 1. Create a batch directory to stage your batch of compound objects for CONTENTdm.
@@ -28,15 +26,15 @@ With the correct parameters, the it can also
       * `Directory` as the first column, followed by `Title`. This should contain the name of the subdirectory where the compound object files are stored in the batch directory.
       * `File Name` as the last column.
 4. Open PowerShell and navigate to where [contentdm-tools](https://github.com/psu-libraries/contentdmtools) are saved. It may be easier to navigate to this folder using Windows File Explorer and hold the shift key while right-clicking to select "Open PowerShell window here."
-5. Use the command `batchCreateCompoundObjects.ps1 -path C:\path\to\batch` to process batch of compound objects. By default, only metadata and images are processed. You can use the following parameters as well.
-     * `-ocr` to run Tesseract and tell it what to do.
+5. Use the command `batchCreateCompoundObjects.ps1 -path C:\path\to\batch` to process batch of compound objects as described above. The outputs can be customized by using the following parameters:
+     * `-ocr` will set the TXT and PDF outputs from Tesseract and Ghostscript
        * `text` to only generate TXT transcripts
        * `PDF` to only generate a 200 ppi searchable PDF
        * `both` to generate both TXT transcripts and a searchable PDF
-     * `-originals` to specify what to do with the original TIF images
+     * `-originals`  will specify what to do with the original TIF images
        * `keep` to save the originals
        * `discard` to delete them
-     * Example: `batchCreateCompoundObjects.ps1 -ocr both -originals keep -path G:\pstsc_01822\2019-07\`
+     * Example: `batchCreateCompoundObjects.ps1 -ocr text -originals discard -path G:\pstsc_01822\2019-07\` will only create TXT transcripts (no PDF) and discard the original TIF images.
    
 ### Adding batches to CONTENTdm
 1. Open CONTENTdm Project Client and open a project pre-configured for the collection to which you are uploading.
