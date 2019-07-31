@@ -1,7 +1,7 @@
 # PowerShell Scripts for Batch Procesing on CONTENTdm
 
-  * [Batch loads of objects](batchCreateCompoundObjects.md)
-  * [Batch editing items](batchEdit)
+  * [Batch loads of objects](docs/batchCreateCompoundObjects.md)
+  * [Batch editing items](docs/batchEdit.md)
   * [Batch re-OCRing items](batchReOCR)
 
 ## PowerShell Scripts

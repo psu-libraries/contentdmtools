@@ -3,8 +3,11 @@
 
 # Read in the metadata changes with -csv path, pass the collection alias with -alias collectionAlias.
 param (
+    [Parameter()]
     [string]$csv = "metadata.csv",
-    [Parameter(Mandatory=$true)][string]$alias = $(Throw "Use -alias to specify a collection.")
+    
+    [Parameter(Mandatory=$true)]
+    [string]$alias = $(Throw "Use -alias to specify a collection.")
  )
 
 # Setup timestamps
