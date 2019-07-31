@@ -1,4 +1,4 @@
-## Batch Editing Metadata
+# Batch Editing CONTENTdm Metadata
 The `batchEdit.ps1` script can be used to process `metadata.csv` into SOAP XML that can be fed into [CONTENTdm Catcher](https://www.oclc.org/support/services/contentdm/help/add-ons-help/contentdm-catcher.en.html). If successfully loaded from catcher, they need to be indexed (but not approved) in the Administrative GUI.
 
 ## Usage
@@ -32,12 +32,12 @@ You will be prompted to enter your CONTENTdm username and password, as well as y
 - Note field property configurations and disable required fields and controlled vocabulary in Admin GUI.
 - Export UTF-8 CSV called metadata.csv and save it in the directory where `batchEdit.ps1` is saved.
   - You can pass any CSV with `-csv path.csv` as the first parameter when executing the script.
-- Run `batchEdit.ps1` in a PowerShell window.
+- Run `batchEdit.ps1 -alias collectionAlias` in a PowerShell window.
 - Index the collection.
 - Re-configure field properties.
 - Review log for any errors.
 
 ## Future Development
- - Combine settings for Cather into one file [[1]](https://git.psu.edu/digipres/contentdm/issues/1)
- - Sort metadata and send object metadata first [[2]](https://git.psu.edu/digipres/contentdm/issues/2)
- - Search log for errors and report back when ending script [[3]](https://git.psu.edu/digipres/contentdm/issues/3)
+ - Combine settings for Catcher into one file
+ - Sort metadata and send object metadata first
+ - Search log for errors and report back when ending script

@@ -1,4 +1,4 @@
-# Creating Batch of CONTENTdm Compound Objects
+# Creating a Batch of CONTENTdm Compound Objects
 CONTENTdm's [Directory Structure](https://help.oclc.org/Metadata_Services/CONTENTdm/Compound_objects/Add_multiple_compound_objects/Directory_structure) specification gives flexibility for supplying files and metadata for a batch of compound objects that are being loaded to the same collection. Files arranged in the Directory Structure can be efficiently loaded using Project Client and avoid some of its limitations.
 
 This script will take
@@ -61,8 +61,8 @@ If you are unable to run PowerShell with Administrative Rights, you should be ab
 * This script has only been tested on Windows Powershell 5.1, but might work on other platforms with Powershell Core 6+.
 
 ## Dependencies
-contentdm-tools uses openly-licensed tools to process images. These tools are already included, so you don't need to install anything. They are listed here to credit the original projects and their contributors.
+CONTENTdm Tools uses openly-licensed tools to process images. These tools are already included, so you don't need to install anything. They are listed here to credit the original projects and their contributors.
 * [Ghostscript](https://ghostscript.com/) -- A tool for processing PDF files, used here to merge PDFs and downsample image resolution within PDFs.
-* [GraphicsMagick](http://www.graphicsmagick.org/) -- "The swiss army knife of iamge processing", used here to convert TIF to JP2, while ensuring JP2 compliance and color management.
+* [GraphicsMagick](http://www.graphicsmagick.org/) -- "The swiss army knife of image processing", used here to convert TIF to JP2, while ensuring JP2 compliance and color management.
   * [ImageMagick](https://imagemagick.org/index.php) -- GraphicsMagick itself is based on an earlier project called ImageMagick.
 * [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) -- Tesseract is the leading open-source OCR package and currently developed by Google. Used here to convert TIF to TXT and generate searchable PDFs.

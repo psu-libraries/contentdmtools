@@ -1,5 +1,6 @@
-# Powershell script to process metadata changes into SOAP XML and feeding it to CONTENTdm Catcher.
-# Nathan Tallman. Created in August 2018, heavily refactored in May 2019.
+# batchEdit.ps1
+# By Nathan Tallman, created in August 2018, heavily refactored in May 2019.
+# https://github.com/psu-libraries/contentdmtools
 
 # Read in the metadata changes with -csv path, pass the collection alias with -alias collectionAlias.
 param (
@@ -15,10 +16,9 @@ function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
 
 # Setup logs
 If(!(Test-Path logs)) {New-Item -ItemType Directory -Path logs | Out-Null }
-$log = ("logs/" + $alias + '_batchEdit_' + $(Get-Date -Format yyyyMMddTHHmmssffff) + "_log.txt")
+$log = ("logs\batchEdit_" + $alias + "_log_" + $(Get-Date -Format yyyyMMddTHHmmssffff) + ".txt")
 
 # Setup credentials. Securely store the user, password and license on local machine so they don't have to be entered everytime.
-## TODO: Combine this into one file saved in the root of batchEdit. https://git.psu.edu/digipres/contentdm/issues/1
 Write-Output "Checking for stored user settings, will prompt and store if not found."
 If(!(Test-Path settings)) {New-Item -ItemType Directory -Path settings | Out-Null }
 $user = If(Test-Path settings/user.txt) {Get-Content "settings/user.txt"} else { Read-Host "Enter the CONTENTdm user" }
@@ -82,7 +82,6 @@ function Send-SOAPRequestFromFile
 }
 
 # Read in the metadata.
-## TODO: Pull out objects and send them as SOAP first, then send item SOAP https://git.psu.edu/digipres/contentdm/issues/2
 Write-Output "$(Get-Timestamp) Processing metadata edits into SOAP XML for catcher..." | Tee-Object -Filepath $log
 Write-Output "---------------------" | Out-File -Filepath $log -Append
 $metadata = Import-Csv -Path "$csv"
@@ -130,12 +129,11 @@ Write-Output "  $(Get-Timestamp) SOAP XML created for $soap, sending it to Catch
     Write-Host "ERROR ERROR ERROR" -Fore "red"
     Write-Output $Return | Tee-Object -Filepath $log -Append
     Write-Output "---------------------" | Out-File -Filepath $log -Append
-    Write-HOST "  $(Get-Timestamp) ERROR: Script halted without completing." -Fore "red"
-    Write-Output "  $(Get-Timestamp) ERROR: Script halted without completing." | Out-File -Filepath $log -Append
+    Write-HOST "  $(Get-Timestamp) Unknown error, $soap not sent" -Fore "red"
+    Write-Output "  $(Get-Timestamp) Unknown error, $soap not sent" | Out-File -Filepath $log -Append
   }
 }
 
-## TODO: Searching log for errors and report back, color coded. https://git.psu.edu/digipres/contentdm/issues/3
 Write-Output "---------------------" | Out-File -Filepath $log -Append
 Write-Host "$(Get-Timestamp) Batch metadata changes are complete."
 Write-Output "$(Get-Timestamp) Batch metadata changes are complete." | Out-File -Filepath $log -Append

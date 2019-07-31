@@ -1,10 +1,8 @@
 # batchCreateCompoundObjects.ps1
-# Nathan Tallman, Created in August 2018, Updated in 30 July 2019
-# https://git.psu.edu/digipres/contentdm/blob/master/batchCreateCompoundOjects.ps1
+# By Nathan Tallman, created in August 2018, updated in 30 July 2019.
+# https://github.com/psu-libraries/contentdmtools
 
-# DOCUMENT INCLUDED UTILITIES - VERIONS, and LICENSES
-
-# Setup the switches
+# Parameters
 [cmdletbinding()]
 Param(
     [Parameter()]
@@ -29,7 +27,7 @@ $gm = $(Resolve-Path "util\gm\gm.exe")
 $adobe = $(Resolve-Path "util\icc\sRGB_v4.icc")
 $path = $(Resolve-Path "$path")
 $batch = $path | Split-Path -Leaf
-$log = ($path + "\" + $batch + "_batchLoadCreate_log.txt")
+$log = ($PSScriptRoot + "\logs\batchLoadCreate_" + $batch + "_log_" + $(Get-Date -Format yyyyMMddTHHmmssffff) + ".txt")
 $pwd = $(Get-Location).Path
 $dirCount = (Get-ChildItem pst* -Directory -Path $path).Count
 
@@ -38,14 +36,14 @@ function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
 function Convert-OCR($ocrText) {
     (Get-Content $ocrText) | 
     ForEach-Object {
-        $_ -replace '</', '' `
-           -replace '/>', ''
+        $_ -replace '<' `
+           -replace '>'
     } | Set-Content $ocrText
 }
 
 Write-Output "----------------------------------------------" 2>&1  | Tee-Object -file $log
 Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Create Compound Objects Starting." 2>&1  | Tee-Object -file $log -Append
-Write-Output "Batch Location: $path"
+Write-Output "Batch Location: $path"  2>&1  | Tee-Object -file $log -Append
 Write-Output "Number of directories in batch: $dirCount" 2>&1  | Tee-Object -file $log -Append
 Write-Output "----------------------------------------------" 2>&1  | Tee-Object -file $log -Append
 
@@ -156,14 +154,14 @@ ForEach ($object in $objects.keys) {
         Write-Output "        Originals discarded." 2>&1  | Tee-Object -file $log -Append
     }
 
-    Write-Output "$(Get-TimeStamp) Completed $object."
+    Write-Output "$(Get-TimeStamp) Completed $object."  2>&1  | Tee-Object -file $log -Append
 }
 
 # Return to the starting directory
 Set-Location "$pwd"
 Write-Output "----------------------------------------------" 2>&1  | Tee-Object -file $log -Append
 Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Create Compound Objects Complete." 2>&1  | Tee-Object -file $log -Append
-Write-Output "Batch Location: $path"
+Write-Output "Batch Location: $path"  2>&1  | Tee-Object -file $log -Append
 Write-Output "Batch Log:      $log" 2>&1  | Tee-Object -file $log -Append
 Write-Output "Number of objects metadata.csv:   $($objects.Count)" 2>&1  | Tee-Object -file $log -Append
 Write-Output "Number of directories in batch:   $dirCount" 2>&1  | Tee-Object -file $log -Append
