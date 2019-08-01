@@ -1,8 +1,8 @@
-# Creating a Batch of CONTENTdm Compound Objects
+# Creating a Batch of CONTENTdm Compound Objects (Document Type)
 CONTENTdm's [Directory Structure](https://help.oclc.org/Metadata_Services/CONTENTdm/Compound_objects/Add_multiple_compound_objects/Directory_structure) specification gives flexibility for supplying files and metadata for a batch of compound objects that are being loaded to the same collection. Files arranged in the Directory Structure can be efficiently loaded using Project Client and avoid some of its limitations.
 
 This script will take
-* a directory containing subdirectories for each compound object, each containing TIF images,
+* a directory containing subdirectories for each document-type compound object, each containing TIF images,
 * a metadata CSV file called `metadata.csv` that contains compound object-level metadata,
 
 and create within each compound object subdirectory
@@ -27,14 +27,23 @@ and create within each compound object subdirectory
       * `File Name` as the last column.
 4. Open PowerShell and navigate to where [contentdm-tools](https://github.com/psu-libraries/contentdmtools) are saved. It may be easier to navigate to this folder using Windows File Explorer and hold the shift key while right-clicking to select "Open PowerShell window here."
 5. Use the command `batchCreateCompoundObjects.ps1 -path C:\path\to\batch` to process batch of compound objects as described above. The outputs can be customized by using the following parameters:
+     * `-metadata` specifies the path and filename for a CSV of metadata.
+       * DEFAULT value is `metadata.csv`. Any file is assumed to be in the root directory of `-path`.
+     * `-jp2` indicates whether you or not you need to generate JP2 images. This is useful for vended digization. (PDFs can also be passed through, just use the appropriate `-ocr` option.)
+       * `true` if you are starting with only TIF images and need to generate JP2 images. DEFAULT.
+       * `false` if you are starting with TIF and JP2 images and only need to organize them.
+       * `skip` to bypass any JP2 actions.
      * `-ocr` will set the TXT and PDF outputs from Tesseract and Ghostscript
-       * `text` to only generate TXT transcripts
-       * `PDF` to only generate a 200 ppi searchable PDF
-       * `both` to generate both TXT transcripts and a searchable PDF
+       * `text` to only generate TXT transcripts.
+       * `PDF` to only generate a 200 ppi searchable PDF.
+       * `both` to generate both TXT transcripts and a searchable PDF. DEFAULT.
+       * `skip` to bypass any OCR actions.
      * `-originals`  will specify what to do with the original TIF images
-       * `keep` to save the originals
-       * `discard` to delete them
+       * `keep` to save the originals. DEFAULT.
+       * `discard` to delete them.
+       * `skip` to bypass any action regarding originals.
      * Example: `batchCreateCompoundObjects.ps1 -ocr text -originals discard -path G:\pstsc_01822\2019-07\` will only create TXT transcripts (no PDF) and discard the original TIF images.
+     * Example: `batchCreateCompoundObjects.ps1 -jp2 skip -ocr skip -originals skip -path G:\pstsc_01822\2019-07\` will only generate metadata files. This is useful if you have already processed batches, but had last minute metadata changes. You can run this over a already processed batch and it will save over the existing metadata.
    
 ### Adding batches to CONTENTdm
 1. Open CONTENTdm Project Client and open a project pre-configured for the collection to which you are uploading.

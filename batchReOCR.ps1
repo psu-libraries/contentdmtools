@@ -6,11 +6,11 @@
 param(
   [Parameter(Mandatory)]
   [string]
-  $alias  = $(Throw "Use -alias to specify the alias for the collection."),
+  $collection  = $(Throw "Use -collection to specify the alias for the collection."),
 
   [Parameter(Mandatory)]
   [string]
-  $fulltext  = $(Throw "Use -fulltext to specify the nickname of the field used to save full-text transcripts."),
+  $field  = $(Throw "Use -field to specify the nickname of the field used to save full-text transcripts."),
 
   [Parameter(Mandatory)]
   [string]
@@ -25,7 +25,7 @@ param(
 $gm = $(Resolve-Path "util\gm\gm.exe")
 $tesseract = $(Resolve-Path "util\tesseract\tesseract.exe")
 $pwd = $(Get-Location).Path
-$log = ($PSScriptRoot + "\logs\batchReOCR_" + $alias + "_log_" + $(Get-Date -Format yyyyMMddTHHmmssffff) + ".txt")
+$log = ($PSScriptRoot + "\logs\batchReOCR_" + $collection + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
 $csv = @()
 
 # Functions
@@ -39,12 +39,12 @@ function Convert-OCR($ocrText) {
 }
 
 # Get the CONTENTdm records for the collection
-$hits = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmQuery/$alias/0/dmrecord!find/nosort/1024/1/0/0/0/0/1/0/json"
+$hits = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmQuery/$collection/0/dmrecord!find/nosort/1024/1/0/0/0/0/1/0/json"
 $records = $hits.records
 
 Write-Output "----------------------------------------------" | Tee-Object -file $log
 Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Re-OCR Starting." | Tee-Object -file $log -Append
-Write-Output "Collection Alias: $alias"  | Tee-Object -file $log -Append
+Write-Output "Collection Alias: $collection"  | Tee-Object -file $log -Append
 Write-Output "Collection Items: $($records.count)"  | Tee-Object -file $log -Append
 Write-Output "----------------------------------------------" | Tee-Object -file $log -Append
 
@@ -54,6 +54,7 @@ Set-Location tmp | Tee-Object -file $log -Append
 $i = 0
 $noFiles = 0
 $notImage = 0
+$e = 0
 foreach ($record in $records) {
   $i++
   Write-Output ($(Get-Timestamp) + " Starting item "  + $($record.dmrecord) + " (" + $i + " of " + $records.count + " items)...") | Tee-Object -file $log -Append
@@ -62,13 +63,14 @@ foreach ($record in $records) {
     $noFiles++
   }
   else {
-    $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $alias + "/" + $record.pointer + "/json")
+    $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $collection + "/" + $record.pointer + "/json")
     $filename = $imageInfo.filename
     $fileExtension = $filename.substring($filename.length -4,4)
     if ($fileExtension -match "jp2") {
+      $e++
       $imageFile = ($record.dmrecord + ".jpg")
       Write-Output "        Downloading $imageFile." | Tee-Object -file $log -Append
-      Invoke-RestMethod ($public + "/utils/ajaxhelper/?CISOROOT=" + $alias + "&CISOPTR=" + $record.pointer + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0") -OutFile $imageFile | Tee-Object -file $log -Append
+      Invoke-RestMethod ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $record.pointer + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0") -OutFile $imageFile | Tee-Object -file $log -Append
       Write-Output "        Optimizing image for OCR." | Tee-Object -file $log -Append
       Invoke-Expression ("$gm mogrify -format tif -colorspace gray $imageFile") 2>&1 | Tee-Object -file $log -Append
       $imageFile = ($record.dmrecord + ".tif")
@@ -81,7 +83,7 @@ foreach ($record in $records) {
       Write-Output "        Add transcript to data file for updating collection." | Tee-Object -file $log -Append
       $itemDetails = New-Object -TypeName PSObject
       $itemDetails | Add-Member -MemberType NoteProperty -Name dmrecord -Value $record.dmrecord
-      $itemDetails | Add-Member -MemberType NoteProperty -Name $fulltext -Value $("$value")
+      $itemDetails | Add-Member -MemberType NoteProperty -Name $field -Value $("$value")
       $csv += $itemDetails
       $csv | Export-CSV ocr.csv -NoTypeInformation
     } else {
@@ -95,21 +97,24 @@ foreach ($record in $records) {
 Set-Location $pwd
 
 # Send the new OCR to CONTENTdm
-Write-Output "$(Get-Timestamp) Sending new transcripts to CONTENTdm using batchEdit.ps1, which will also generate its own log. Errors will not appear in this log..." | Tee-Object -file $log -Append
-Invoke-Expression ".\batchEdit.ps1 -csv tmp\ocr.csv -alias $alias" 2>&1  | Tee-Object -file $log -Append
-Write-Output "$(Get-Timestamp) Transcripts sent, don't forget to re-index the collection in the Administrative GUI." | Tee-Object -file $log -Append
+if ($e -gt 0) {
+  Write-Output "$(Get-Timestamp) Sending new transcripts to CONTENTdm using batchEdit.ps1, which will also generate its own log. Errors will not appear in this log..." | Tee-Object -file $log -Append
+  Invoke-Expression ".\batchEdit.ps1 -csv tmp\ocr.csv -alias $collection" 2>&1  | Tee-Object -file $log -Append
+  Write-Output "$(Get-Timestamp) Transcripts sent, don't forget to re-index the collection in the Administrative GUI." | Tee-Object -file $log -Append
+} else {
+  Write-Output "$(Get-Timestamp) No updated transcripts to send to CONTENTdm." | Tee-Object -file $log -Append
+}
 
 # Cleanup the tmp files
-Write-Output "$(Get-Timestamp) Deleting temporary files created throughout this process..." | Tee-Object -file $log -Append
-$tifCount = (Get-ChildItem *.txt -Recurse -Path tmp).Count
+Write-Output "$(Get-Timestamp) Deleting any temporary files created throughout this process." | Tee-Object -file $log -Append
 Remove-Item tmp -Recurse -Force | Tee-Object -file $log -Append
 
 Write-Output "----------------------------------------------" | Tee-Object -file $log -Append
 Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Re-OCR Complete." | Tee-Object -file $log -Append
-Write-Output "Collection Alias: $alias"  | Tee-Object -file $log -Append
+Write-Output "Collection Alias: $collection"  | Tee-Object -file $log -Append
 Write-Output "Batch Log: $log" | Tee-Object -file $log -Append
 Write-Output "Number of items in collection:  $($records.count)" | Tee-Object -file $log -Append
-Write-Output "Number of items in re-OCR'ed:   $tifCount" | Tee-Object -file $log -Append
+Write-Output "Number of items OCRed:          $e" | Tee-Object -file $log -Append
 Write-Output "Number of items without files:  $noFiles" | Tee-Object -file $log -Append
 Write-Output "Number of items without images: $notImage" | Tee-Object -file $log -Append
 Write-Output "---------------------------------------------" | Tee-Object -file $log -Append

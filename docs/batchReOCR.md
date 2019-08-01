@@ -14,9 +14,9 @@ A temporary subdirectory will be created in your CONTENTdm Tools directory where
 
 ## Usage
 1. Open a PowerShell window and navigate to your CONTENTdm Tools root directory.
-2. Enter the following command to begin: `.\batchReOCR.ps1 -alias collectionAlias -fulltext transcriptFieldNickname -public https://urlToPublicCONTENTDM.edu -server https://urlToAdministrativeServer.edu`
-     * `-alias` -- Alias for the CONTENTdm collection you wish to re-OCR.
-     * `-fulltext` -- Field in the collection configured for `Full Text Search`.
+2. Enter the following command to begin: `.\batchReOCR.ps1 -collection collectionAlias -field transcriptFieldNickname -public https://urlToPublicCONTENTDM.edu -server https://urlToAdministrativeServer.edu`
+     * `-collection` -- Collection alias for the CONTENTdm collection you wish to re-OCR.
+     * `-field` -- Collection field configured with the data type `Full Text Search`.
      * `-public` -- URL to the Public UI CONTENTdm website. *No trailing slash*.
      * `-server` -- URL to the Administrative UI. This may include a port number for self-hosted instances. *No trailing slash*.
 3. Depending on the size of the collection, this could take a long time to run. You can watch the terminal output as it goes or review the log afterwards. It will end with a (very) brief report on the results.

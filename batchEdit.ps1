@@ -2,13 +2,13 @@
 # By Nathan Tallman, created in August 2018, heavily refactored in May 2019.
 # https://github.com/psu-libraries/contentdmtools
 
-# Read in the metadata changes with -csv path, pass the collection alias with -alias collectionAlias.
+# Read in the metadata changes with -csv path, pass the collection alias with -collection collectionAlias.
 param (
     [Parameter()]
     [string]$csv = "metadata.csv",
     
     [Parameter(Mandatory=$true)]
-    [string]$alias = $(Throw "Use -alias to specify a collection.")
+    [string]$collection = $(Throw "Use -collection to specify a collection.")
  )
 
 # Setup timestamps
@@ -16,7 +16,7 @@ function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
 
 # Setup logs
 If(!(Test-Path logs)) {New-Item -ItemType Directory -Path logs | Out-Null }
-$log = ("logs\batchEdit_" + $alias + "_log_" + $(Get-Date -Format yyyyMMddTHHmmssffff) + ".txt")
+$log = ("logs\batchEdit_" + $collection + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
 
 # Setup credentials. Securely store the user, password and license on local machine so they don't have to be entered everytime.
 Write-Output "Checking for stored user settings, will prompt and store if not found."
@@ -99,7 +99,7 @@ $SOAPRequest += "`t`t`t<cdmurl>http://server17287.contentdm.oclc.org:8888</cdmur
 $SOAPRequest += "`t`t`t<username>$user</username>`r`n"
 $SOAPRequest += "`t`t`t<password>$pw</password>`r`n"
 $SOAPRequest += "`t`t`t<license>$lc</license>`r`n"
-$SOAPRequest += "`t`t`t<collection>$alias</collection>`r`n"
+$SOAPRequest += "`t`t`t<collection>$collection</collection>`r`n"
 $SOAPRequest += "`t`t`t`t<metadata>`r`n"
 $SOAPRequest += "`t`t`t`t`t<metadataList>`r`n"
   ForEach ($header in $headers) {
@@ -116,7 +116,7 @@ $SOAPRequest += "`t`t</v6:processCONTENTdm>`r`n"
 $SOAPRequest += "`t</soapenv:Body>`r`n"
 $SOAPRequest += "</soapenv:Envelope>"
 
-$soap = "logs/soap_" + $alias+ "_" + $record.dmrecord + ".xml"
+$soap = "logs/soap_" + $collection+ "_" + $record.dmrecord + ".xml"
 
 Write-Output "  $(Get-Timestamp) SOAP XML created for $soap, sending it to Catcher..." | Tee-Object -Filepath $log -Append
   Try {
