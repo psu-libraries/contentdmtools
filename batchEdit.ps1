@@ -1,4 +1,4 @@
-# batchEdit.ps1
+# batchEdit.ps1 1.0
 # By Nathan Tallman, created in August 2018, heavily refactored in May 2019.
 # https://github.com/psu-libraries/contentdmtools
 
@@ -159,4 +159,4 @@ if (($($metadata.count) -ne $i) -or ($($metadata.count) -ne $j) -or ($i -ne $j))
   Write-Warning "Warning: Check the above report and log, there is a missmatch in the final numbers." | Tee-Object -file $log -Append
   Write-Output "Warning: Check the above report and log, there is a missmatch in the final numbers." >> $log
 }
-Write-Host -ForegroundColor Yellow "This window can be closed at anytime."
+Write-Host -ForegroundColor Yellow "This window can be closed at anytime. Don't forget to index the collection!"

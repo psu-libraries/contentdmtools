@@ -1,4 +1,4 @@
-# batchReOCR.ps1 
+# batchReOCR.ps1 1.0
 # Nathan Tallman, created in October 2018, re-written 31 July 2019.
 # https://github.com/psu-libraries/contentdmtools
 
@@ -106,7 +106,7 @@ Set-Location $pwd
 # Send the new OCR to CONTENTdm
 if ($e -gt 0) {
   Write-Output "$(Get-Timestamp) Sending new transcripts to CONTENTdm using batchEdit.ps1, which will also generate its own log. Errors will not appear in this log..." | Tee-Object -file $log -Append
-  Invoke-Expression ("$dir\batchEdit.ps1 -csv $path\tmp\ocr.csv -alias $collection") 2>&1  | Tee-Object -file $log -Append
+  Invoke-Expression ($dir + "\batchEdit.ps1 -csv " + $path + "\tmp\ocr.csv -alias " + $collection) 2>&1  | Tee-Object -file $log -Append
   Write-Output "$(Get-Timestamp) Transcripts sent, don't forget to re-index the collection in the Administrative GUI." | Tee-Object -file $log -Append
 } else {
   Write-Output "$(Get-Timestamp) No updated transcripts to send to CONTENTdm." | Tee-Object -file $log -Append
@@ -125,4 +125,4 @@ Write-Output "Number of items OCRed:          $e" | Tee-Object -file $log -Appen
 Write-Output "Number of items without files:  $noFiles" | Tee-Object -file $log -Append
 Write-Output "Number of items without images: $notImage" | Tee-Object -file $log -Append
 Write-Output "---------------------------------------------" | Tee-Object -file $log -Append
-Write-Host -ForegroundColor Yellow "This window can be closed at anytime."
+Write-Host -ForegroundColor Yellow "This window can be closed at anytime. Don't forget to index the collection!"

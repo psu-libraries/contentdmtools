@@ -36,8 +36,3 @@ You will be prompted to enter your CONTENTdm username and password, as well as y
 - Index the collection.
 - Re-configure field properties.
 - Review log for any errors.
-
-## Future Development
- - Combine settings for Catcher into one file
- - Sort metadata and send object metadata first
- - Search log for errors and report back when ending script

@@ -13,6 +13,11 @@ and create within each compound object subdirectory
   * create a 200 ppi searchable PDF for the entire compound object, saved in the compound object subdirectory; and
 * move TIF images into an `originals` subdirectory.
 
+By combining parameters, you can create different types of batches based on your need.
+* Metadata only output (skip JP2 and OCR outputs, skip originals handling)
+* Processes existing TIF and JP2s into CONTENTdm load packages
+* Skip OCR for visual resources
+
 ## Usage
 1. Create a batch directory to stage your batch of compound objects for CONTENTdm.
 2. Within this batch directory, create subdirectories for each compound object and copy TIF files for each object.
@@ -58,20 +63,7 @@ and create within each compound object subdirectory
 
 &ast; There is no way to upload the generated searchable PDF as the Print PDF that Project Client generates here. Depending on your volume, OCLC is able to load customer created PDFs as the Print PDF on a consultant basis.
 
-## Gotchas and Limitations
-### PowerShell and the PowerShell Execution Policy
-This script was written using Windows PowerShell 5.1, which is installed on almost every Windows computer. To run PowerShell scripts, you need to first run a command that allows them. To do this, open PowerShell with Administrative Rights and run the following command: `Set-ExecutionPolicy Unrestricted`.
-
-If you are unable to run PowerShell with Administrative Rights, you should be able to run the following command, but it may need to be in every session. `powershell.exe -ExecutionPolicy bypass`
-
-### Limitations
+## Limitations
 * [Monograph compound objects](https://help.oclc.org/Metadata_Services/CONTENTdm/Compound_objects/Add_multiple_compound_objects/Directory_structure#Monographs), or compound objects with defined structure, such as Sections or Chapters, have not been tested, but should work.
 * Picture Cube and Postcard compound objects have not been tested.
 * This script has only been tested on Windows Powershell 5.1, but might work on other platforms with Powershell Core 6+.
-
-## Dependencies
-CONTENTdm Tools uses openly-licensed tools to process images. These tools are already included, so you don't need to install anything. They are listed here to credit the original projects and their contributors.
-* [Ghostscript](https://ghostscript.com/) -- A tool for processing PDF files, used here to merge PDFs and downsample image resolution within PDFs.
-* [GraphicsMagick](http://www.graphicsmagick.org/) -- "The swiss army knife of image processing", used here to convert TIF to JP2, while ensuring JP2 compliance and color management.
-  * [ImageMagick](https://imagemagick.org/index.php) -- GraphicsMagick itself is based on an earlier project called ImageMagick.
-* [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) -- Tesseract is the leading open-source OCR package and currently developed by Google. Used here to convert TIF to TXT and generate searchable PDFs.

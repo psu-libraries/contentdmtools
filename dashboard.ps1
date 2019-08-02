@@ -1,11 +1,11 @@
-# contentdmToolsGUI-dashboard.ps1
-# GUI for CONTENTdm Tools using Universal Dashboard
+# dashboard.ps1
+# Nathan Tallman, August 2019.
+# CONTENTdm Tools Dashboard
 
 # Variables
 $scriptpath = $MyInvocation.MyCommand.Path
 $dir = Split-Path $scriptpath
 $global:pids = @()
-$theme = Get-UDTheme -Name "Default"
 
 $HomePage = New-UDPage -Name "Home" -Content {
     New-UDLayout -Columns 2 -Content {
@@ -27,8 +27,8 @@ $HomePage = New-UDPage -Name "Home" -Content {
 $Start = New-UDPage -Name "Start Batch Tasks" -Content {
     New-UDLayout -Columns 1 -Content {
         New-UDInput -Title "Create Batch of Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
-            New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\batch' -DefaultValue 'C:\path\to\batch'
-            New-UDInputField -Type 'textarea' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue 'metadata.csv'
+            New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\batch'
+            New-UDInputField -Type 'textarea' -Name 'metadata' -Placeholder 'metadata.csv'
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
             New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "skip") -DefaultValue "both"
             New-UDInputField -Type 'select' -Name 'originals' -Placeholder @("Originals") -Values @("keep", "discard", "skip") -DefaultValue "keep"
@@ -44,8 +44,8 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
         }
 
         New-UDInput -Title "Edit Batch of Metadata" -Id "batchEdit" -SubmitText "Start" -Content {
-            New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'C:\path\to\metadata.csv' -DefaultValue 'C:\path\to\metadata.csv'
-            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias' -DefaultValue "collectionAlias"
+            New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'C:\path\to\metadata.csv'
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
         } -Endpoint {
             Param($metadata, $collection)
             $scriptblock = "$dir\batchEdit.ps1 -csv $metadata -collection $collection"
@@ -58,11 +58,11 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
         }
 
         New-UDInput -Title "Re-OCR a Collection" -Id "batchReOCR" -SubmitText "Start" -Content {
-            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias' -DefaultValue "collectionAlias"
-            New-UDInputField -Type 'textbox' -Name 'field' -Placeholder 'Fulltext Field' -DefaultValue "fulltextFieldNickname"
-            New-UDInputField -Type 'textbox' -Name 'path' -Placeholder 'C:\path\to\staging' -DefaultValue "C:\path\to\staging"
-            New-UDInputField -Type 'textbox' -Name 'public' -Placeholder 'URL for Public UI' -DefaultValue "https://public/"
-            New-UDInputField -Type 'textbox' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue "https://admin"
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textbox' -Name 'field' -Placeholder 'Fulltext Field'
+            New-UDInputField -Type 'textbox' -Name 'path' -Placeholder 'C:\path\to\staging'
+            New-UDInputField -Type 'textbox' -Name 'public' -Placeholder 'URL for Public UI'
+            New-UDInputField -Type 'textbox' -Name 'server' -Placeholder 'URL for Admin UI'
         } -Endpoint {
             Param($collection, $field, $path, $public, $server)
             $scriptblock = "$dir\batchReOCR.ps1 -collection $collection -field $field -path $path -public $public -server $server"
@@ -98,7 +98,13 @@ $Navigation = New-UDSideNav -Content {
     }
 }
 
-Enable-UDLogging -Level Debug -FilePath "$dir\logs\dashboard_log.txt" -Console
+Enable-UDLogging -Level Error -FilePath "$dir\logs\dashboard_log.txt" -Console
+
+$theme = New-UDTheme -Name "cdm-tools" -Definition @{
+    '::placeholder' = @{
+        color = 'black'
+    }
+} -Parent "Default"
 
 Start-UDDashboard -Content {
     New-UDDashboard -Title "CONTENTdm Tools Dashboard" -Navigation $Navigation -NavbarLinks $NavBarLinks -Theme $theme -Pages @($HomePage, $Start)
