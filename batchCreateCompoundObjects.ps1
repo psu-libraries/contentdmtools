@@ -30,13 +30,15 @@ Param(
 )
 
 # Variables
-$tesseract = $(Resolve-Path "util\tesseract\tesseract.exe")
-$gs = $(Resolve-Path "util\gs\bin\gswin64c.exe")
-$gm = $(Resolve-Path "util\gm\gm.exe")
-$adobe = $(Resolve-Path "util\icc\sRGB_v4.icc")
+$scriptpath = $MyInvocation.MyCommand.Path
+$dir = Split-Path $scriptpath
+$tesseract = "$dir\util\tesseract\tesseract.exe"
+$gs = "$dir\util\gs\bin\gswin64c.exe"
+$gm = "$dir\util\gm\gm.exe"
+$adobe = "$dir\util\icc\sRGB_v4.icc"
 $path = $(Resolve-Path "$path")
 $batch = $path | Split-Path -Leaf
-$log = ($PSScriptRoot + "\logs\batchLoadCreate_" + $batch + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
+$log = ($dir + "\logs\batchLoadCreate_" + $batch + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
 $pwd = $(Get-Location).Path
 $dirCount = (Get-ChildItem pst* -Directory -Path $path).Count
 
@@ -205,3 +207,4 @@ if ((($($objects.Count) -ne $o) -or ($($objects.Count) -ne $dirCount) -or ($dirC
     Write-Warning "Warning: Check the above report and log, there is a missmatch in the final numbers." | Tee-Object -file $log -Append
     Write-Output "Warning: Check the above report and log, there is a missmatch in the final numbers." >> $log
 }
+Write-Host -ForegroundColor Yellow "This window can be closed at anytime."

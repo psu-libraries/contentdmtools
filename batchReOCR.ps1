@@ -14,6 +14,10 @@ param(
 
   [Parameter(Mandatory)]
   [string]
+  $path  = $(Throw "Use -path to specify a location for temporary staging files."),
+
+  [Parameter(Mandatory)]
+  [string]
   $public  = $(Throw "Use -public to specify the URL for the CONTENTdm Public GUI. Ex: https://cdm1234.contentdm.oclc.org"),
 
   [Parameter(Mandatory)]
@@ -22,10 +26,13 @@ param(
 )
 
 # Variables
-$gm = $(Resolve-Path "util\gm\gm.exe")
-$tesseract = $(Resolve-Path "util\tesseract\tesseract.exe")
+$scriptpath = $MyInvocation.MyCommand.Path
+$dir = Split-Path $scriptpath
+$gm = "$dir\util\gm\gm.exe"
+$tesseract = "$dir\util\tesseract\tesseract.exe"
+$path = $(Resolve-Path "$path")
 $pwd = $(Get-Location).Path
-$log = ($PSScriptRoot + "\logs\batchReOCR_" + $collection + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
+$log = ($dir + "\logs\batchReOCR_" + $collection + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
 $csv = @()
 
 # Functions
@@ -49,8 +56,8 @@ Write-Output "Collection Items: $($records.count)"  | Tee-Object -file $log -App
 Write-Output "----------------------------------------------" | Tee-Object -file $log -Append
 
 # Download the JP2 for each item in the collection (named for the record number, not original filename) and run Tesseract OCR
-if (!(Test-Path tmp)) { New-Item -ItemType Directory -Path tmp | Out-Null }
-Set-Location tmp | Tee-Object -file $log -Append
+if (!(Test-Path $path\tmp)) { New-Item -ItemType Directory -Path $path\tmp | Out-Null }
+Set-Location $path\tmp | Tee-Object -file $log -Append
 $i = 0
 $noFiles = 0
 $notImage = 0
@@ -99,7 +106,7 @@ Set-Location $pwd
 # Send the new OCR to CONTENTdm
 if ($e -gt 0) {
   Write-Output "$(Get-Timestamp) Sending new transcripts to CONTENTdm using batchEdit.ps1, which will also generate its own log. Errors will not appear in this log..." | Tee-Object -file $log -Append
-  Invoke-Expression ".\batchEdit.ps1 -csv tmp\ocr.csv -alias $collection" 2>&1  | Tee-Object -file $log -Append
+  Invoke-Expression ("$dir\batchEdit.ps1 -csv $path\tmp\ocr.csv -alias $collection") 2>&1  | Tee-Object -file $log -Append
   Write-Output "$(Get-Timestamp) Transcripts sent, don't forget to re-index the collection in the Administrative GUI." | Tee-Object -file $log -Append
 } else {
   Write-Output "$(Get-Timestamp) No updated transcripts to send to CONTENTdm." | Tee-Object -file $log -Append
@@ -107,7 +114,7 @@ if ($e -gt 0) {
 
 # Cleanup the tmp files
 Write-Output "$(Get-Timestamp) Deleting any temporary files created throughout this process." | Tee-Object -file $log -Append
-Remove-Item tmp -Recurse -Force | Tee-Object -file $log -Append
+Remove-Item $path\tmp -Recurse -Force | Tee-Object -file $log -Append
 
 Write-Output "----------------------------------------------" | Tee-Object -file $log -Append
 Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Re-OCR Complete." | Tee-Object -file $log -Append
@@ -118,3 +125,4 @@ Write-Output "Number of items OCRed:          $e" | Tee-Object -file $log -Appen
 Write-Output "Number of items without files:  $noFiles" | Tee-Object -file $log -Append
 Write-Output "Number of items without images: $notImage" | Tee-Object -file $log -Append
 Write-Output "---------------------------------------------" | Tee-Object -file $log -Append
+Write-Host -ForegroundColor Yellow "This window can be closed at anytime."

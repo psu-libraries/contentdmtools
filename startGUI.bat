@@ -1,3 +1,3 @@
 @ECHO OFF
-%SYSTEMROOT%\System32\WindowsPowerShell\v1.0\PowerShell.exe -NoProfile -ExecutionPolicy Bypass -Command "& .\contentdmToolsGUI.ps1"
+%SYSTEMROOT%\System32\WindowsPowerShell\v1.0\PowerShell.exe -NoProfile -ExecutionPolicy Bypass -Command "& .\dashboard.ps1"
 ::PAUSE
