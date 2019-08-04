@@ -6,6 +6,6 @@ PowerShell is a scripting language that is included in all versions of Windows s
 
 ## Documentation
 Even if you are using the CONTENTdm Tools Dashboard, you will find the documentation, which is aimed more at command line usage, helpful. It provides details on the parameters and specific usage of each tool.
-  * [Batch create compound objects](docs/batchCreateCompoundObjects.md)
-  * [Batch edit objects and items](docs/batchEdit.md)
-  * [Batch Re-OCR items](docs/batchReOCR.md)
+  * [Batch create compound objects](batchCreateCompoundObjects.md)
+  * [Batch edit objects and items](batchEdit.md)
+  * [Batch Re-OCR items](batchReOCR.md)
