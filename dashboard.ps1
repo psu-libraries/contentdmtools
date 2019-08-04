@@ -28,7 +28,7 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
     New-UDLayout -Columns 1 -Content {
         New-UDInput -Title "Create Batch of Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\batch'
-            New-UDInputField -Type 'textarea' -Name 'metadata' -Placeholder 'metadata.csv'
+            New-UDInputField -Type 'textarea' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue 'metadata.csv'
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
             New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "skip") -DefaultValue "both"
             New-UDInputField -Type 'select' -Name 'originals' -Placeholder @("Originals") -Values @("keep", "discard", "skip") -DefaultValue "keep"
@@ -46,9 +46,10 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
         New-UDInput -Title "Edit Batch of Metadata" -Id "batchEdit" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'C:\path\to\metadata.csv'
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textbox' -Name 'server' -Placeholder 'URL for Admin UI'
         } -Endpoint {
-            Param($metadata, $collection)
-            $scriptblock = "$dir\batchEdit.ps1 -csv $metadata -collection $collection"
+            Param($metadata, $collection, $server)
+            $scriptblock = "$dir\batchEdit.ps1 -csv $metadata -collection $collection -server $server"
             $p = Start-Process PowerShell.exe -ArgumentList "-noexit -command $scriptblock" -PassThru
             $batchEditId = $($p.id)
             $global:pids += $batchEditId
@@ -71,6 +72,16 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
             $global:pids += $batchReOCRId
             New-UDInputAction -Content @(
                 New-UDCard -Title "Re-OCR a Collection" -Text "The batch re-OCR has started in a new PowerShell window, you should see running output there. When it's complete, you can close the window. You can also close the window to cancel at any time."
+            )
+        }
+
+        New-UDInput -Title "Published Collection Alias'" -Id "getCollections" -SubmitText "Submit" -Content {
+            New-UDInputField -Type 'textbox' -Name 'server' -Placeholder 'URL for Admin UI'
+        } -Endpoint {
+            Param($server)
+            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionList/json"
+            New-UDInputAction -Content @(
+                New-UDGrid -Title "Published Collection Alias'" -Headers @("Name", "Alias") -Properties @("name", "secondary_alias") -Endpoint { $data | Out-UDGridData}
             )
         }
 

@@ -94,7 +94,7 @@ catch {
 foreach ($item in $items) {
     $l++
     $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $collection + "/" + $item.dmrecord + "/json")
-    Write-Output ($(Get-Timestamp) + " Starting item " + $($item.dmrecord) + " (" + $l + " of " + $pages2ocr.count + " items)...") | Tee-Object -FilePath $log -Append
+    Write-Output ($(Get-Timestamp) + " Starting dmrecord: " + $($item.dmrecord) + " (" + $l + " of " + $pages2ocr.count + " items)...") | Tee-Object -FilePath $log -Append
     $imageFile = ($item.dmrecord + ".jpg")
     Write-Output "        Downloading $imageFile." | Tee-Object -FilePath $log -Append
     Invoke-RestMethod ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmrecord + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0") -OutFile $imageFile | Tee-Object -FilePath $log -Append
@@ -123,7 +123,7 @@ $ocrUpdates = (Import-CSV ocr.csv).count
 
 # Send the new OCR to CONTENTdm
 Write-Output "$(Get-Timestamp) Sending new transcripts to CONTENTdm using batchEdit.ps1, which will also generate its own log. Errors will not appear in this log..." | Tee-Object -FilePath $log -Append
-$command = ($dir + "\batchEdit.ps1 -csv " + $path + "\tmp\ocr.csv -collection " + $collection)
+$command = ($dir + "\batchEdit.ps1 -csv " + $path + "\tmp\ocr.csv -collection " + $collection + " -server " + $server)
 Try { Invoke-Expression -Command "$command" 2>&1 | Tee-Object -FilePath $log -Append }
 Catch { 
     Write-Error "ERROR: Batch edit not sent to CONTENTdm Catcher." | Tee-Object -FilePath $log -Append

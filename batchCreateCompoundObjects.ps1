@@ -38,6 +38,7 @@ $gm = "$dir\util\gm\gm.exe"
 $adobe = "$dir\util\icc\sRGB_v4.icc"
 $path = $(Resolve-Path "$path")
 $batch = $path | Split-Path -Leaf
+if (!(Test-Path $dir\logs)) { New-Item -ItemType Directory -Path $dir\logs | Out-Null }
 $log = ($dir + "\logs\batchLoadCreate_" + $batch + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
 $pwd = $(Get-Location).Path
 $dirCount = (Get-ChildItem pst* -Directory -Path $path).Count

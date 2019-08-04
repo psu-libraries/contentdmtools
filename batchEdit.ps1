@@ -17,13 +17,9 @@ param (
 # Variables
 $scriptpath = $MyInvocation.MyCommand.Path
 $dir = Split-Path $scriptpath
-
-# Setup timestamps
-function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
-
-# Setup logs
 If (!(Test-Path logs)) { New-Item -ItemType Directory -Path logs | Out-Null }
 $log = ("$dir\logs\batchEdit_" + $collection + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
+function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
 
 Write-Output "----------------------------------------------" | Tee-Object -file $log
 Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Edit Starting." | Tee-Object -file $log -Append
@@ -175,8 +171,8 @@ Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Edit Complete." | Tee-Objec
 Write-Output "Collection Alias: $collection"  | Tee-Object -file $log -Append
 Write-Output "Batch Log: $log" | Tee-Object -file $log -Append
 Write-Output "Records to be Edited:  $($metadata.count)" | Tee-Object -file $log -Append
-Write-Output "Records Attempted:  $i" | Tee-Object -file $log -Append
-Write-Output "Records Edited:   $j" | Tee-Object -file $log -Append
+Write-Output "Records Attempted:     $i" | Tee-Object -file $log -Append
+Write-Output "Records Edited:        $j" | Tee-Object -file $log -Append
 Write-Output "---------------------------------------------" | Tee-Object -file $log -Append
 if (($($metadata.count) -ne $i) -or ($($metadata.count) -ne $j) -or ($i -ne $j)) {
   Write-Warning "Warning: Check the above report and log, there is a missmatch in the final numbers." | Tee-Object -file $log -Append
