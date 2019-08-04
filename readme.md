@@ -29,5 +29,5 @@ CONTENTdm Tools uses openly-licensed tools to process images and CONTENTdm servi
 * [Ghostscript](https://ghostscript.com/) -- A tool for processing PDF files, used here to merge PDFs and downsample image resolution within PDFs.
 * [GraphicsMagick](http://www.graphicsmagick.org/) -- "The swiss army knife of image processing", used here to convert TIF to JP2, while ensuring JP2 compliance and color management.
   * [ImageMagick](https://imagemagick.org/index.php) -- GraphicsMagick itself is based on an earlier project called ImageMagick.
-* [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) -- Tesseract is the leading open-source OCR package and currently developed by Google. Used here to convert TIF to TXT and generate searchable PDFs.
+* [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) -- Tesseract is the leading open-source OCR package which is currently developed by Google, used here to convert TIF to TXT and generate searchable PDFs.
 * [Universal Dashboard](https://universaldashboard.io/) -- Universal Dashboard is an open-souce, cross-platform PowerShell module for developing and hosting web-based interactive dashboards; used here to provide the CONTENTdm Tools Dashboard GUI.

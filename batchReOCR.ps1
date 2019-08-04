@@ -1,5 +1,5 @@
 # batchReOCR.ps1 1.0
-# Nathan Tallman, created in October 2018, re-written 31 July 2019.
+# Nathan Tallman, created in October 2018, updated August 2019.
 # https://github.com/psu-libraries/contentdmtools
 
 # Parameters
@@ -83,9 +83,9 @@ if (!(Test-Path $path\tmp)) { New-Item -ItemType Directory -Path $path\tmp | Out
 Set-Location $path\tmp
 $pages2ocr.GetEnumerator() | Select-Object -Property Name, Value | Export-CSV items.csv -NoTypeInformation
 Get-Content items.csv | Select-Object -Skip 1 | Set-Content items_clean.csv
-try { $items = import-csv items_clean.csv -Header dmnumber, file }
+try { $items = import-csv items_clean.csv -Header dmrecord, file }
 catch {
-    Write-Warning "Error: Check your parameters and try again. Close this window at any time." | Tee-Object -FilePath $log -Append
+    Write-Error "Error: Check your parameters and try again. Close this window at any time." | Tee-Object -FilePath $log -Append
     Write-Output "Error: Check your parameters and try again. Close this window at any time." >>  $log
     return
 }
@@ -93,27 +93,27 @@ catch {
 # Download the JP2 for each item in the collection (named for the record number, not original filename) and run Tesseract OCR
 foreach ($item in $items) {
     $l++
-    $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $collection + "/" + $item.dmnumber + "/json")
-    Write-Output ($(Get-Timestamp) + " Starting item " + $($item.dmnumber) + " (" + $l + " of " + $pages2ocr.count + " items)...") | Tee-Object -FilePath $log -Append
-    $imageFile = ($item.dmnumber + ".jpg")
+    $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $collection + "/" + $item.dmrecord + "/json")
+    Write-Output ($(Get-Timestamp) + " Starting item " + $($item.dmrecord) + " (" + $l + " of " + $pages2ocr.count + " items)...") | Tee-Object -FilePath $log -Append
+    $imageFile = ($item.dmrecord + ".jpg")
     Write-Output "        Downloading $imageFile." | Tee-Object -FilePath $log -Append
-    Invoke-RestMethod ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmnumber + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0") -OutFile $imageFile | Tee-Object -FilePath $log -Append
+    Invoke-RestMethod ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmrecord + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0") -OutFile $imageFile | Tee-Object -FilePath $log -Append
     Write-Output "        Optimizing image for OCR." | Tee-Object -FilePath $log -Append
     Invoke-Expression ("$gm mogrify -format tif -colorspace gray $imageFile") 2>&1 | Tee-Object -FilePath $log -Append
-    $imageFile = ($item.dmnumber + ".tif")
+    $imageFile = ($item.dmrecord + ".tif")
     Write-Output "        Running Tesseract OCR on the image." | Tee-Object -FilePath $log -Append
-    Invoke-Expression ("$tesseract $imageFile " + $item.dmnumber + " txt quiet") 2>&1 | Tee-Object -FilePath $log -Append
-    $imageTxt = ($item.dmnumber + ".txt")
+    Invoke-Expression ("$tesseract $imageFile " + $item.dmrecord + " txt quiet") 2>&1 | Tee-Object -FilePath $log -Append
+    $imageTxt = ($item.dmrecord + ".txt")
     Write-Output "        Sanitizing OCR text for CONTENTdm." | Tee-Object -FilePath $log -Append
     Convert-OCR -ocrText $imageTxt
     if ($?) { $i++ }
     $value = (get-content $imageTxt) | Where-Object { $_.Trim(" `t") }
     Write-Output "        Add transcript to data file for updating collection." | Tee-Object -FilePath $log -Append
     $itemDetails = New-Object -TypeName PSObject
-    $itemDetails | Add-Member -MemberType NoteProperty -Name dmrecord -Value $item.dmnumber
+    $itemDetails | Add-Member -MemberType NoteProperty -Name dmrecord -Value $item.dmrecord
     $itemDetails | Add-Member -MemberType NoteProperty -Name $field -Value $("$value")
     $csv += $itemDetails
-    Write-Output "$(Get-Timestamp) Completed item $($item.dmnumber)." | Tee-Object -FilePath $log -Append
+    Write-Output "$(Get-Timestamp) Completed item $($item.dmrecord)." | Tee-Object -FilePath $log -Append
 }
 
 # Remove items that have blank OCR output
@@ -126,7 +126,8 @@ Write-Output "$(Get-Timestamp) Sending new transcripts to CONTENTdm using batchE
 $command = ($dir + "\batchEdit.ps1 -csv " + $path + "\tmp\ocr.csv -collection " + $collection)
 Try { Invoke-Expression -Command "$command" 2>&1 | Tee-Object -FilePath $log -Append }
 Catch { 
-    Write-Host "ERROR: Batch edit not sent to CONTENTdm Catcher." -Fore "red" | Tee-Object -FilePath $log -Append
+    Write-Error "ERROR: Batch edit not sent to CONTENTdm Catcher." | Tee-Object -FilePath $log -Append
+    Write-Output "ERROR: Batch edit not sent to CONTENTdm Catcher." >> $log
     Write-Output $Return | Tee-Object -FilePath $log -Append 
 }
 Write-Output "$(Get-Timestamp) Batch edit of updated transcripts complete." | Tee-Object -FilePath $log -Append

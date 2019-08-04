@@ -1,5 +1,5 @@
 # batchEdit.ps1 1.0
-# By Nathan Tallman, created in August 2018, heavily refactored in May 2019.
+# By Nathan Tallman, created in August 2018, updated August 2019.
 # https://github.com/psu-libraries/contentdmtools
 
 # Read in the metadata changes with -csv path, pass the collection alias with -collection collectionAlias.
@@ -8,7 +8,10 @@ param (
     [string]$csv = "metadata.csv",
     
     [Parameter(Mandatory = $true)]
-    [string]$collection = $(Throw "Use -collection to specify a collection.")
+    [string]$collection = $(Throw "Use -collection to specify a collection."),
+
+    [Parameter(Mandatory = $true)]
+    [string]$server = $(Throw "Use -server to specify a url for the Admin UI.")
 )
 
 # Variables
@@ -22,15 +25,32 @@ function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
 If (!(Test-Path logs)) { New-Item -ItemType Directory -Path logs | Out-Null }
 $log = ("$dir\logs\batchEdit_" + $collection + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
 
-# Read in the metadata.
-$metadata = Import-Csv -Path "$csv"
-$headers = ($metadata[0].psobject.Properties).Name
-
 Write-Output "----------------------------------------------" | Tee-Object -file $log
 Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Edit Starting." | Tee-Object -file $log -Append
 Write-Output "Collection Alias: $collection"  | Tee-Object -file $log -Append
-Write-Output "Records to be Edited: $($metadata.count)"  | Tee-Object -file $log -Append
 Write-Output "----------------------------------------------" | Tee-Object -file $log -Append
+
+# Read in the metadata, add Level column to sort, lookup type, sort rows so Objects are first.
+Write-Output "Reading in the metadata and sorting the compound objects first." | Tee-Object -file $log -Append
+$metadata = Import-Csv -Path "$csv"
+$headers = ($metadata[0].psobject.Properties).Name
+$metadata | Select-Object *,@{Name='Level';Expression={''}} | Export-CSV -Path "$dir\tmp1.csv" -NoTypeInformation
+$metadata = Import-Csv -Path "$dir\tmp1.csv"
+
+foreach ($record in $metadata) {
+    $dmrecord = $($record.dmrecord)
+    $itemInfo = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetItemInfo/$collection/$dmrecord/json"
+    $itemFile = $($itemInfo.find)
+    $itemType = $itemFile.Substring($itemFile.Length - 3, 3)
+    if ($itemType -eq "cpd") {
+        $record.Level = "Object"
+    } elseif ($itemType -ne "cpd") {
+        $record.Level = "Item"
+    }
+}
+
+$metadata | Sort-Object -Property Level -Descending| Export-CSV $dir\tmp2.csv -NoTypeInformation
+$metadata = Import-Csv -Path "$dir\tmp2.csv"
 
 # Setup credentials. Securely store the user, password and license on local machine so they don't have to be entered everytime.
 Write-Host "Checking for stored user settings, will prompt and store if not found."
@@ -127,9 +147,9 @@ ForEach ($record in $metadata) {
 
     $soap = "$dir\logs\soap_" + $collection + "_" + $record.dmrecord + ".xml"
 
-    $recnum = $record.dmrecord
+    $dmrecord = $record.dmrecord
 
-    Write-Output "$(Get-Timestamp) SOAP XML created for dmrecord $recnum, sending it to Catcher..." | Tee-Object -Filepath $log -Append
+    Write-Output "$(Get-Timestamp) SOAP XML created for dmrecord $dmrecord, sending it to Catcher..." | Tee-Object -Filepath $log -Append
   
     Try {
         $j++
@@ -142,10 +162,13 @@ ForEach ($record in $metadata) {
         Write-Host "ERROR ERROR ERROR" -Fore "red" | Tee-Object -file $log -Append
         Write-Output $Return | Tee-Object -Filepath $log -Append
         Write-Output "---------------------" | Tee-Object -file $log -Append
-        Write-HOST "  $(Get-Timestamp) Unknown error, dmrecord $recnum not updated." -Fore "red" | Tee-Object -file $log -Append
-        Write-Output "  $(Get-Timestamp) Unknown error, dmrecord $recnum not updated." | Out-File -Filepath $log -Append
+        Write-HOST "  $(Get-Timestamp) Unknown error, dmrecord $dmrecord not updated." -Fore "red" | Tee-Object -file $log -Append
+        Write-Output "  $(Get-Timestamp) Unknown error, dmrecord $dmrecord not updated." | Out-File -Filepath $log -Append
     }
 }
+
+# Cleanup the tmp files
+Remove-Item "$dir\tmp*.csv" -Force -ErrorAction SilentlyContinue | Out-Null
 
 Write-Output "----------------------------------------------" | Tee-Object -file $log -Append
 Write-Output "$(Get-Timestamp) CONTENTdm Tools Batch Edit Complete." | Tee-Object -file $log -Append
@@ -159,4 +182,4 @@ if (($($metadata.count) -ne $i) -or ($($metadata.count) -ne $j) -or ($i -ne $j))
   Write-Warning "Warning: Check the above report and log, there is a missmatch in the final numbers." | Tee-Object -file $log -Append
   Write-Output "Warning: Check the above report and log, there is a missmatch in the final numbers." >> $log
 }
-Write-Host -ForegroundColor Yellow "This window can be closed at anytime. Don't forget to index the collection!"
+Write-Host -ForegroundColor Yellow "Unless it is being used within batchReOCR, this window can be closed at anytime. Don't forget to index the collection!"

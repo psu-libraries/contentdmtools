@@ -73,6 +73,17 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
                 New-UDCard -Title "Re-OCR a Collection" -Text "The batch re-OCR has started in a new PowerShell window, you should see running output there. When it's complete, you can close the window. You can also close the window to cancel at any time."
             )
         }
+
+        New-UDInput -Title "Collection Field Properties" -Id "getCollProp" -SubmitText "Submit" -Content {
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textbox' -Name 'server' -Placeholder 'URL for Admin UI'
+        } -Endpoint {
+            Param($collection, $server)
+            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionFieldInfo/$collection/json"
+            New-UDInputAction -Content @(
+                New-UDGrid -Title "Collection Field Properties for $collection" -Headers @("Name", "Nickname", "Data Type", "Large", "Required", "Searchable", "Hidden", "Controlled Vocab") -Properties @("name", "nick", "type", "size", "req", "search", "hide", "vocab") -Endpoint { $data | Out-UDGridData}
+            )
+        }
     }
 }
 

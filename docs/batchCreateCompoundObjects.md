@@ -10,7 +10,7 @@ and create within each compound object subdirectory
 * JP2 images for every TIF image using [GraphicsMagick](http://www.graphicsmagick.org/), saved in a `scans` subdirectory.
 * run [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) to
   * create TXT transcripts for every TIF image, saved in a `transcripts` subdirectory, and
-  * create a 200 ppi searchable PDF for the entire compound object, saved in the compound object subdirectory; and
+  * create a 200 ppi searchable PDF for the entire compound object, saved in the compound object subdirectory, and
 * move TIF images into an `originals` subdirectory.
 
 By combining parameters, you can create different types of batches based on your need.
@@ -22,33 +22,33 @@ By combining parameters, you can create different types of batches based on your
 1. Create a batch directory to stage your batch of compound objects for CONTENTdm.
 2. Within this batch directory, create subdirectories for each compound object and copy TIF files for each object.
     * Best practice is to use the digital object identifier for the subdirectory name.
-3. Save metadata for all compound objects in the batch as a CSV file named `metadata.csv` in the root the batch directory.
+3. Save metadata for all compound objects in the root directory of the batch as a CSV file named `metadata.csv`.
     * Metadata may first be created using Excel or another progam and converted to CSV.
     * Always use UTF-8 character encoding when editing and saving.
     * All fields from the collections Field Properties need to be present and conform to any data types or other validations.
       * `Title` should always be the first column. It will soon be the second when you add `Directory`.
-    * **Two additional fields will needed**
+    * **Two additional fields will be needed**
       * `Directory` as the first column, followed by `Title`. This should contain the name of the subdirectory where the compound object files are stored in the batch directory.
       * `File Name` as the last column.
-4. Open PowerShell and navigate to where [contentdm-tools](https://github.com/psu-libraries/contentdmtools) are saved. It may be easier to navigate to this folder using Windows File Explorer and hold the shift key while right-clicking to select "Open PowerShell window here."
+4. Open PowerShell and navigate to where [contentdm-tools](https://github.com/psu-libraries/contentdmtools) are saved. It may be easier to navigate to this folder using Windows File Explorer and holding the shift key while right-clicking to select "Open PowerShell window here."
 5. Use the command `batchCreateCompoundObjects.ps1 -path C:\path\to\batch` to process batch of compound objects as described above. The outputs can be customized by using the following parameters:
      * `-metadata` specifies the path and filename for a CSV of metadata.
        * DEFAULT value is `metadata.csv`. Any file is assumed to be in the root directory of `-path`.
-     * `-jp2` indicates whether you or not you need to generate JP2 images. This is useful for vended digization. (PDFs can also be passed through, just use the appropriate `-ocr` option.)
+     * `-jp2` indicates whether or not you need to generate JP2 images. This is useful for vended digization. (PDFs can also be passed through, just use the appropriate `-ocr` option.)
        * `true` if you are starting with only TIF images and need to generate JP2 images. DEFAULT.
        * `false` if you are starting with TIF and JP2 images and only need to organize them.
        * `skip` to bypass any JP2 actions.
-     * `-ocr` will set the TXT and PDF outputs from Tesseract and Ghostscript
+     * `-ocr` will set the TXT and PDF outputs from Tesseract and Ghostscript.
        * `text` to only generate TXT transcripts.
        * `PDF` to only generate a 200 ppi searchable PDF.
        * `both` to generate both TXT transcripts and a searchable PDF. DEFAULT.
        * `skip` to bypass any OCR actions.
-     * `-originals`  will specify what to do with the original TIF images
+     * `-originals`  will specify what to do with the original TIF images.
        * `keep` to save the originals. DEFAULT.
        * `discard` to delete them.
        * `skip` to bypass any action regarding originals.
      * Example: `batchCreateCompoundObjects.ps1 -ocr text -originals discard -path G:\pstsc_01822\2019-07\` will only create TXT transcripts (no PDF) and discard the original TIF images.
-     * Example: `batchCreateCompoundObjects.ps1 -jp2 skip -ocr skip -originals skip -path G:\pstsc_01822\2019-07\` will only generate metadata files. This is useful if you have already processed batches, but had last minute metadata changes. You can run this over a already processed batch and it will save over the existing metadata.
+     * Example: `batchCreateCompoundObjects.ps1 -jp2 skip -ocr skip -originals skip -path G:\pstsc_01822\2019-07\` will only generate metadata files. This is useful if you have already processed batches but had last minute metadata changes. You can run this over an already processed batch and it will save over the existing metadata.
    
 ### Adding batches to CONTENTdm
 1. Open CONTENTdm Project Client and open a project pre-configured for the collection to which you are uploading.
@@ -64,6 +64,6 @@ By combining parameters, you can create different types of batches based on your
 &ast; There is no way to upload the generated searchable PDF as the Print PDF that Project Client generates here. Depending on your volume, OCLC is able to load customer created PDFs as the Print PDF on a consultant basis.
 
 ## Limitations
-* [Monograph compound objects](https://help.oclc.org/Metadata_Services/CONTENTdm/Compound_objects/Add_multiple_compound_objects/Directory_structure#Monographs), or compound objects with defined structure, such as Sections or Chapters, have not been tested, but should work.
+* [Monograph compound objects](https://help.oclc.org/Metadata_Services/CONTENTdm/Compound_objects/Add_multiple_compound_objects/Directory_structure#Monographs), or compound objects with defined structure, such as Sections or Chapters, have not been tested but should work.
 * Picture Cube and Postcard compound objects have not been tested.
-* This script has only been tested on Windows Powershell 5.1, but might work on other platforms with Powershell Core 6+.
+* This script has only been tested on Windows Powershell 5.1 but might work on other platforms with Powershell Core 6+.

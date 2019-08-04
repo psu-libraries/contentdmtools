@@ -1,5 +1,5 @@
 # batchCreateCompoundObjects.ps1 1.0
-# By Nathan Tallman, created in August 2018, updated in 30 July 2019.
+# By Nathan Tallman, created in August 2018, updated in August 2019.
 # https://github.com/psu-libraries/contentdmtools
 
 # Parameters
