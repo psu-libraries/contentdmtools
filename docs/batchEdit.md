@@ -1,15 +1,14 @@
 # Batch Editing CONTENTdm Metadata
-The `batchEdit.ps1` script can be used to process `metadata.csv` into SOAP XML that can be fed into [CONTENTdm Catcher](https://www.oclc.org/support/services/contentdm/help/add-ons-help/contentdm-catcher.en.html). If successfully loaded from catcher, they need to be indexed (but not approved) in the Administrative GUI.
+The `batchEdit.ps1` script can be used to process `metadata.csv` into SOAP XML that can be fed into [CONTENTdm Catcher](https://www.oclc.org/support/services/contentdm/help/add-ons-help/contentdm-catcher.en.html). If successfully loaded from catcher, metadata needs to be indexed (but not approved) in the CONTENTdm Administrative UI.
 
 ## Usage
-Run `.\batchEdit.ps1 -collection collectionAlias -server https://URLforAdminUI` to kick off the script. The data table of metadata changes should be in the in the same directory as the script and named `metadata.csv`. You can pass any CSV by using inserting `-csv path` before the `-collection` parameter when running the script.
+Run `.\batchEdit.ps1 -collection collectionAlias -server https://URLforAdminUI` to kick off the script. The data table of metadata changes should be in the same directory as the script and named `metadata.csv`. You can pass any CSV by inserting `-csv path` before the `-collection` parameter when running the script.
 
 You will be prompted to enter your CONTENTdm username and password, as well as your organization's license number. These will be securely stored on your workstation in a subdirectory called settings; you wouldn't need to enter them again. If they are lost, you will be prompted to enter them again.
   * **Field names used as headers are not the same as the field name labels in CONTENTdm**. The dashboard provides a Collection Field Properties Lookup that will display the **field nicknames** for a collection. Also, yoou can look at the `CISONICK` value in the Field Properties in the Admin Gui for the correct field name to use as the CSV header.
-  * **Controlled vocabularies and required fields (other than title) must be turned off before pitching metadata to catcher**. Make note of the settings and turn them back on after done batch editing.
+  * **Controlled vocabularies and required fields (other than title) must be turned off before pitching metadata to catcher**. Make note of the settings and turn them back on after you are done with batch editing.
 
 ### Sample metadata.csv
-
 | dmrecord | title         | subjec        |
 | -------- | ------------- | ------------- |
 | 90       | Batch Edit 20 | Batch Edit 17 |
@@ -19,8 +18,9 @@ You will be prompted to enter your CONTENTdm username and password, as well as y
 | 94       | Batch Edit 04 | Batch Edit 27 |
 | 99       | OBJECT TITLE  | Batch Edit 18 |
 | 108      | OBJECT TITLE  | Batch Edit 19 |
+
 ### Sample Workflow
-- Export metadata from CONTENTdm
+- Export metadata from CONTENTdm.
 - Work in Excel or Open Refine and batch edit.
 - Remove fields/columns with no changes.
 - Remove rows with no changes. (This isn't critical, but good practice.)
