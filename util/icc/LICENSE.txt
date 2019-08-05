@@ -1,0 +1,11 @@
+Licensing
+
+The copyright owner and terms of use of an ICC profile are normally identified in the Creator field in the profile header and in the Copyright tag. Where ICC is the copyright owner, the following license terms apply:
+
+"This profile is made available by the International Color Consortium, and may be copied, distributed, embedded, made, used, and sold without restriction. Altered versions of this profile shall have the original identification and copyright information removed and shall not be misrepresented as the original profile."
+
+ICC recommends that other profile creators and copyright owners adopt a similar wording for profiles that are intended to be freely distributed. See the Profile Registration page for more details.
+
+Disclaimer
+
+This page is maintained by the ICC as a service to the color management community. The ICC is unable to recommend profiles for particular applications, and accepts no responsibility for the performance of these profiles. Users should take care to ensure that profiles are suitable for their requirements. 

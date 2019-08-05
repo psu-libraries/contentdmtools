@@ -1,0 +1,40 @@
+Licensing is handled exclusively by Artifex Software, Inc.
+
+Please contact us to inquire about a commercial license.
+Open Source Licensing Basics
+
+Unlike many Open Source software projects, Ghostscript is owned and fully controlled by Artifex. The vast majority of all Ghostscript development is done by Artifex engineers, and on rare occasions, bug fixes accepted from outside contributors (under license by Artifex). If you have further questions regarding the development and control of Ghostscript, please contact Miles Jones, President/CEO Artifex Software.
+
+AGPL Ghostscript is provided under the GNU Affero General Public License (AGPL), as well as under an Artifex commercial license. For more detailed and complete information on the AGPL please visit the GNU web site.
+
+This page is intended to provide a summary of information that developers and companies may find useful in understanding licensing options available for Artifex products. It does not represent legal advice. We strongly encourage developers and/or companies to review the specific licensing text made available on the GNU web site.
+
+If you are trying to determine whether to use Ghostscript software under AGPL or our alternative Artifex commercial license, please consider the following guidelines.
+
+Distribution – Unlike most other open source licenses, AGPL's conditions are not all dependent on re-distribution of the software. For most other open source licenses (like GPL), the condition for making source code available is the distribution of the software. Distribution means making a copy available (or delivering a copy) to someone outside your organization. So, for example, providing the software to an employee within your organization is not distribution, but providing the software to an outside consultant, beta tester, or customer is distribution. If you are redistributing our software in binary form, you must make the source code available. AGPL also requires this.
+
+Network Use – However, AGPL also has some conditions even if you are not distributing the software. For example, if you are using the software on your own company's equipment, but you are making the functionality of the software available to users interacting with it remotely through a computer network, and you make any change to the software, you must make the source code for your changed version available to users of the software. Take care to ensure that during network deployment that there is no code change that could invoke the source code availability obligation. This special requirement of AGPL is in Section 13; see the GNU web site for more details.
+
+Bottom line, if you distribute our software, or make the functionality of the software available to users interacting with it remotely through a computer network, you must share your source code.
+
+Corresponding Source – If you combine our software with other software, you might have further obligations under AGPL that you would not have under our alternative commercial license. The conditions of AGPL require you to provide the Corresponding Source code for any binaries you distribute. This may include source code for your application.
+
+The Corresponding Source includes "all the source code needed to generate, install and (for an executable work) run the object code and to modify the work, including scripts to control those activities." For example, if you ship an executable product that includes your application and Ghostscript in a single executable, including integration via static linking, dynamic linking, or any other means that produces a single executable at compile, build, or runtime, then the entire executable must be made available in source code form under AGPL3.
+
+If you meet certain criteria, then we will not consider your distribution of your application in an executable form to be in violation of AGPL, even though you ship an executable product that includes your application and Ghostscript. Here are the criteria:
+
+    It is conspicuous and clear to the end user that he/she is getting access to two separate pieces of software (i.e., AGPL Ghostscript in addition to the application using this product).
+    The end user has the ability to opt out of installing the AGPL version of our products during the install process.
+    Each AGPL module is separable and replaceable within the build.
+    The available source code for the AGPL modules must be for the build that corresponds with your binaries.
+
+Any other redistribution is not licensed under AGPL. If you cannot meet the requirements of AGPL, you should contact us to inquire about a commercial license.
+
+More information on the various licensing options available for our three products follows below.
+Commercial Licensing
+
+Artifex is the exclusive commercial licensing agent for Ghostscript. There is no "public domain" version of Ghostscript.
+
+The kind of distribution or use you plan to make of Ghostscript will determine whether you need a commercial license from Artifex. If you plan to distribute Ghostscript in one of your products or make them available to your SaaS or ASP customers, you should understand the differences between these licenses.
+
+Please note that the conditions apply even if you ship or make available a free demonstration version of your own product or application. An "application," can be any type of software product or application, tool, system or utility.
