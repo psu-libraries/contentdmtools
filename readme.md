@@ -16,13 +16,15 @@ PowerShell is a scripting language that has been included in all versions of Win
       * `Set-ExecutionPolicy Unrestricted`
     * If you do not have administrative rights, you will need to run the following command in every new PowerShell window before scripts will run.
       * `powershell.exe -ExecutionPolicy bypass`
-1. If you plan to use the dashboard, you will need to run a setup script. Two are provided: one which requires Administrative Rights and one which does not. Both will need to be run twice because the session needs to be restarted half-way through for a newly installed module to take effect. 
-    * In a PowerShell window type `.\setup.ps1` or `.\setupNonAdmin.ps1` and press enter. Follow the prompts, including exiting the window, reopening and re-running the script.
-    * If you are running `setupNonAdmin.ps1` don't forget to bypass the ExecutionPolicy the second time.
-1. To start the dashboard, double click on the `startDashboard.bat` file. This will open a terminal window. Once text stops appearing on the screen, go to a browser and visit http://localhost:10000 to view the CONTENTdm Tools Dashboard. You do not need do bypass the ExecutionPolicy for the dashboard, it will automatically do so.
+1. If you plan to use the dashboard, you will need to run a setup script. Two are provided: one which requires Administrative Rights and one which does not. Both will need to be run twice because the session needs to be restarted half-way through for a newly installed module to take effect.
+    * If you have administrative rights and the `ExecutionPolicy` has been set to `Unrestricted`, enter the following command in a PowerShell window and follow the prompts. When asked to close the window, repeat and enter the same command.
+      * `.\setup.ps1`
+    * If you do not have administrative rights, enter the following chain of commands in a PowerShell Window and follow the prompts. When asked to close the window, repeat and enter the same command.
+      * `powershell.exe -ExecutionPolicy bypass ; .\setupNonAdmin.ps1`
+1. To start the dashboard, double click on the `startDashboard.bat` file. This will open a terminal window. Once text stops appearing on the screen, go to a browser and visit http://localhost:10000 to view the CONTENTdm Tools Dashboard. You do not need do bypass the `ExecutionPolicy` for the dashboard, it will automatically do so.
    * **Do not close the terminal window or it will kill the dashboard**. When you are done using CONTENTdm Tools, you can safely close the terminal window.
-   * When you start the dashboard for the first time, you will be prompted for Administrative Credentials and asked which networks the web server can run on.
-1. If you are not using the dashboard, you can run the scripts in a PowerShell session, in the root directory of CONTENTdm Tools. 
+   * When you start the dashboard for the first time, you will be prompted for Administrative Credentials to permit PowerShell to make a web server available networks. You can hit cancel and still use the dashboard on your workstation without Administrative Rights. If you wish other users to access the CONTENTdm Tools Dashboard running on your workstation, you can choose to open the PowerShell web server to Enterprise, Domain, Private, or Public networks. Talk to your IT first.
+1. If you are not using the dashboard, you can run the scripts in a PowerShell window, in the CONTENTdm Tools root directory.
 
 ## Documentation
 Even if you are using the CONTENTdm Tools Dashboard, you will find the documentation, which is aimed more at command line usage, helpful. It provides details on the parameters and specific usage of each tool.
