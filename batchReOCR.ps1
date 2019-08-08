@@ -64,18 +64,25 @@ $records = $hits.records
 foreach ($record in $records) {
     if ($record.filetype -eq "cpd") {
         $pointer = $record.pointer
-        $objects = Invoke-RestMethod "https://server17287.contentdm.oclc.org/dmwebservices/index.php?q=dmGetCompoundObjectInfo/$collection/$pointer/json"
+        $objects = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCompoundObjectInfo/$collection/$pointer/json"
         foreach ($object in $objects) {
-            $pages = $object.page
-            foreach ($page in $pages) {
-                $pages2ocr.Add($page.pageptr, $page.pagefile)
+            if ($object.type -eq "Monograph"){
+                $pages = $object.node.node.page
+                foreach ($page in $pages) {
+                    $pages2ocr.Add($page.pageptr, $page.pagefile)
+                }
+            } else {
+                $pages = $object.page
+                foreach ($page in $pages) {
+                    $pages2ocr.Add($page.pageptr, $page.pagefile)
+                }
             }
         }
     }
     elseif (($record.filetype -eq "jp2") -or ($record.filetype -eq "jpg")) {
         $pages2ocr.Add($record.pointer, $record.find)
     }
-    elseif (($record.filetype -ne "jp2") -or ($record.filetype -ne "jpg")) {
+    else {
         $nonImages++
     }
 }

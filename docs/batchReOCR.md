@@ -1,5 +1,7 @@
 # Batch Re-OCRing a CONTENTdm Collection
-As OCR technology has improved, it is sometimes beneficial to re-run collection objects through OCR for improved transcripts. This script can also be useful to add OCR transcripts to collections that didn't previously have them. This script uses the [Batch Editing](batchEdit.md) script at the end to send the new transcripts to CONTENTdm. If you haven't used batchEdit.ps1 before, you will be prompted to enter credentials for CONTENTdm and a license number.
+As OCR technology has improved, it is sometimes beneficial to re-run collection objects through OCR for improved transcripts. The `batchReOCR.ps1` script will find all the JP2 or JPG images in a collection, including from within Document or Monograph Compound Objects, and run them through Tesseract OCR engine, then send the new OCR data back to CONTENTdm. It can also be useful for adding OCR transcripts to collections that didn't previously have them. 
+
+This script uses the [Batch Editing](batchEdit.md) script at the end to send the new transcripts to CONTENTdm. If you haven't used `batchEdit.ps1` before, you will be prompted to enter credentials for CONTENTdm and a license number. You may want to run a small batch edit before running this script so you don't have to worry about the script pausing and waiting for credentials.
 
 **The collection must have a field with the data type `Full Text Search`**. This field doesn't have to be displayed, but it should be searched. You will need to know this field's nickname (not the same as the field name) to pass as a parameter. 
 

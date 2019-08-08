@@ -28,7 +28,7 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
     New-UDLayout -Columns 1 -Content {
         New-UDInput -Title "Create Batch of Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\batch'
-            New-UDInputField -Type 'textarea' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue 'metadata.csv'
+            New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue 'metadata.csv'
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
             New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "skip") -DefaultValue "both"
             New-UDInputField -Type 'select' -Name 'originals' -Placeholder @("Originals") -Values @("keep", "discard", "skip") -DefaultValue "keep"
@@ -44,9 +44,9 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
         }
 
         New-UDInput -Title "Edit Batch of Metadata" -Id "batchEdit" -SubmitText "Start" -Content {
-            New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'C:\path\to\metadata.csv'
+            New-UDInputField -Type 'textarea' -Name 'metadata' -Placeholder 'C:\path\to\metadata.csv'
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
-            New-UDInputField -Type 'textbox' -Name 'server' -Placeholder 'URL for Admin UI'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI'
         } -Endpoint {
             Param($metadata, $collection, $server)
             $scriptblock = "$dir\batchEdit.ps1 -csv $metadata -collection $collection -server $server"
@@ -61,9 +61,9 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
         New-UDInput -Title "Re-OCR a Collection" -Id "batchReOCR" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
             New-UDInputField -Type 'textbox' -Name 'field' -Placeholder 'Fulltext Field'
-            New-UDInputField -Type 'textbox' -Name 'path' -Placeholder 'C:\path\to\staging'
-            New-UDInputField -Type 'textbox' -Name 'public' -Placeholder 'URL for Public UI'
-            New-UDInputField -Type 'textbox' -Name 'server' -Placeholder 'URL for Admin UI'
+            New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
+            New-UDInputField -Type 'textarea' -Name 'public' -Placeholder 'URL for Public UI'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI'
         } -Endpoint {
             Param($collection, $field, $path, $public, $server)
             $scriptblock = "$dir\batchReOCR.ps1 -collection $collection -field $field -path $path -public $public -server $server"
@@ -76,7 +76,7 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
         }
 
         New-UDInput -Title "Published Collection Alias'" -Id "getCollections" -SubmitText "Submit" -Content {
-            New-UDInputField -Type 'textbox' -Name 'server' -Placeholder 'URL for Admin UI'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI'
         } -Endpoint {
             Param($server)
             $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionList/json"
@@ -86,8 +86,8 @@ $Start = New-UDPage -Name "Start Batch Tasks" -Content {
         }
 
         New-UDInput -Title "Collection Field Properties" -Id "getCollProp" -SubmitText "Submit" -Content {
-            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
-            New-UDInputField -Type 'textbox' -Name 'server' -Placeholder 'URL for Admin UI'
+            New-UDInputField -Type 'textarea' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI'
         } -Endpoint {
             Param($collection, $server)
             $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionFieldInfo/$collection/json"
