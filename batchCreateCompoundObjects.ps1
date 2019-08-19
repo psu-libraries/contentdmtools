@@ -1,5 +1,4 @@
-# batchCreateCompoundObjects.ps1 1.0
-# By Nathan Tallman, created in August 2018, updated in August 2019.
+# batchCreateCompoundObjects.ps1
 # https://github.com/psu-libraries/contentdmtools
 
 # Parameters
@@ -45,12 +44,12 @@ $dirCount = (Get-ChildItem pst* -Directory -Path $path).Count
 
 # Functions
 function Get-TimeStamp { return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date) }
-function Convert-OCR($ocrText) { 
+function Convert-OCR($ocrText) {
     (Get-Content $ocrText) | ForEach-Object {
         $_ -replace '[^a-zA-Z0-9_.,!?$%#@/\s]' `
             -replace '[\u009D]' `
             -replace '[\u000C]'
-    } | Set-Content $ocrText 
+    } | Set-Content $ocrText
 }
 
 Write-Output "----------------------------------------------" | Tee-Object -file $log
@@ -64,10 +63,10 @@ Set-Location $path 2>&1 | Tee-Object -file $log  -Append
 $SourceHeadersDirty = Get-Content -Path $path\$metadata -First 2 | ConvertFrom-Csv
 $SourceHeadersCleaned = $SourceHeadersDirty.PSObject.Properties.Name.Trim()
 $csv = Import-CSV -Path $path\$metadata -Header $SourceHeadersCleaned | Select-Object -Skip 1
-$csv | Foreach-Object { 
+$csv | Foreach-Object {
     foreach ($property in $_.PSObject.Properties) {
         $property.value = $property.value.trim()
-    } 
+    }
 }
 $objects = $csv | Group-Object -AsHashTable -AsString -Property Directory
 $o = 0
@@ -80,7 +79,7 @@ ForEach ($object in $objects.keys) {
     if (!(Test-Path $path\$object)) { New-Item -ItemType Directory -Path $path\$object | Out-Null }
     $objects.$object | Select-Object * -ExcludeProperty Directory | Export-Csv -Delimiter "`t" -Path $path\$object\$object.txt -NoTypeInformation
     Write-Output "        Object metadata for has been broken up into the the Directory Structure." | Tee-Object -file $log -Append
-    
+
     if ($jp2 -eq "true") {
         # Find the TIF files, convert them to JP2, and move them to a scans subdirectory within the object.
         if (!(Test-Path scans)) { New-Item -ItemType Directory -Path scans | Out-Null }
@@ -92,7 +91,7 @@ ForEach ($object in $objects.keys) {
             Invoke-Expression "$gm convert $($_.Name) source.icc" 2>&1 | Tee-Object -file $log -Append
             Invoke-Expression "$gm convert $($_.Name) -profile source.icc -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe scans\$($_.BaseName).jp2" 2>&1 | Tee-Object -file $log -Append
             Remove-Item source.icc 2>&1 | Tee-Object -file $log -Append
-        } 
+        }
         $jp2s = (Get-ChildItem *.jp2 -Recurse -Path scans).Count
         Write-Output "        $object TIF conversion complete: $tiffs TIFs and $jp2s JP2s. $(Get-Timestamp)" | Tee-Object -file $log -Append
     }
@@ -100,7 +99,7 @@ ForEach ($object in $objects.keys) {
         # Move the JP2 files into a scans subdirectory within the object.
         Set-Location $path\$object 2>&1 | Tee-Object -file $log -Append
         if (!(Test-Path scans)) { New-Item -ItemType Directory -Path scans | Out-Null }
-        Get-ChildItem *.jp2 -Recurse | ForEach-Object { 
+        Get-ChildItem *.jp2 -Recurse | ForEach-Object {
             Move-Item $_.FullName scans -Force | Tee-Object -file $log -Append
         }
         $jp2s = (Get-ChildItem *.jp2 -Recurse -Path scans).Count
@@ -115,7 +114,7 @@ ForEach ($object in $objects.keys) {
         $row = @()
         $row += ('"Item ' + $f + ' of ' + $tiffs + '"')
         foreach ($field in ($objcsv | Select-Object * -ExcludeProperty Title, "File Name" | get-member -type NoteProperty)) { $row += ('""') }
-        $row += ("$($_.BaseName).jp2") 
+        $row += ("$($_.BaseName).jp2")
         $item = $row -join "`t"
         Write-Output $item | Out-File $path\$object\$object.txt -Append -Encoding UTF8
         $f++
@@ -128,7 +127,7 @@ ForEach ($object in $objects.keys) {
         Write-Output "        OCR (PDF and TXT conversion) starting..." | Tee-Object -file $log -Append
         if (!(Test-Path transcripts)) { New-Item -ItemType Directory -Path transcripts | Out-Null }
         Get-ChildItem *.tif* -Recurse | ForEach-Object {
-            $i++ 
+            $i++
             Write-Output "        Converting $($_.Basename) ($i of $tiffs)." | Tee-Object -file $log -Append
             Invoke-Expression "$tesseract $($_.FullName) transcripts\$($_.BaseName) txt pdf quiet" 2>&1 | Tee-Object -file $log -Append
         }
@@ -208,4 +207,4 @@ if ((($($objects.Count) -ne $o) -or ($($objects.Count) -ne $dirCount) -or ($dirC
     Write-Warning "Warning: Check the above report and log, there is a missmatch in the final numbers." | Tee-Object -file $log -Append
     Write-Output "Warning: Check the above report and log, there is a missmatch in the final numbers." >> $log
 }
-Write-Host -ForegroundColor Yellow "This window can be closed at anytime."
+Write-Host -ForegroundColor Green "This window can be closed at anytime."
