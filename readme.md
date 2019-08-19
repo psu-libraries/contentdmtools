@@ -11,7 +11,7 @@ PowerShell is a scripting language that has been included in all versions of Win
    * Tesseract can raise false-positives on anti-virus software, so you may need to add an exception and re-extract.
 1. If you haven't already, set the PowerShell ExecutionPolicy as described above.
 1. In File Explorer, navigate to your CONTENTdm Tools directory, In the area it shows files, but not on a file, hold the Shift key and right-click, then choose `Open a PowerShell window Here`.
-1. Set the PowerShell ExecutionPolicy. 
+1. Set the PowerShell ExecutionPolicy.
     * If you have administrative rights, you will need to be in a PowerShell window with administrative rights. If one is already open, right-click the icon and select, `Run as Administrator`. Then enter the following command. When prompted, press Y to agree.
       * `Set-ExecutionPolicy Unrestricted`
     * If you do not have administrative rights, you will need to run the following command in every new PowerShell window before scripts will run.
@@ -30,7 +30,12 @@ PowerShell is a scripting language that has been included in all versions of Win
 Even if you are using the CONTENTdm Tools Dashboard, you will find the documentation, which is aimed more at command line usage, helpful. It provides details on the parameters and specific usage of each tool.
   * [Batch create compound objects](docs/batchCreateCompoundObjects.md).
   * [Batch edit objects and items](docs/batchEdit.md).
-  * [Batch Re-OCR items](docs/batchReOCR.md).
+  * [Batch OCR/Re-OCR a Collection](docs/batchOCR.md).
+
+## Security
+CONTENTdm Tools is designed primary to be used by a single person at their workstation. For convenience, it can store organizational settings and user credentials. It can store multiple user passwords, **anyone can use stored user passwords to send batch edits**. This isn't much of a concern when someone is using CONTENTdm Tools at their wokstation and haven't opened up PowerShell's web server to networks.
+
+If you would like to run CONTENTdm Tools on a server in a networked environment and allow multiple users, it should be possible to workout a secure method. If you used the current version of the software, you would need to take additional network security measures. User passwords are always encrypted.
 
 ## Dependencies
 CONTENTdm Tools uses openly-licensed tools to process images and CONTENTdm services. These tools are already included, so you don't need to install anything apart from running the setup script. They are listed here to credit the original projects and their contributors:

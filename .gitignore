@@ -2,3 +2,4 @@ test/
 logs/
 settings/
 tmp/
+tmp*
