@@ -3,12 +3,24 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 ### Added
-- Settings page to dashboard
+- Settings page added to the dashboard.
+  - Organizational settings to be saved and cached (requires restart).
+  - Multiple user passwords can be saved, when a username is passed as a parameter, it will look up stored credentials.
+    - Warning: CONTENTdm Tools is designed for single-workstation use by a single user. Only allow multiple users to store credentials in a trusted environment.
+- Parallel processing for Batch Create and Batch OCR.
+  - Downloading images.
+  - Converting images for OCR.
+  - Running OCR.
+- PDFtk and xpdf utilities added.
+  - Text can now be extracted from existing searchable PDFs if included in object folders rather than running OCR.
 ### Changed
-- Organizational settings and user credentials now managed through dashboard GUI with CLI fallback.
+- Organizational settings and user credentials are now saved in a CSV and managed through dashboard GUI with CLI fallback. Passwords are stored as secure strings.
 - OCR text now preserves line breaks, but removes duplicate line breaks.
 - "Start Batches" on navigation menu now just called "Batches".
-- Updated documentation
+- Collection and field lookups moved into a single UI row.
+- Updated documentation.
+- Moved logic for various activities into external functions for reuse.
+- Metadata processing will now automatically add `File Name` field if not included and make sure it's the last column if it's included.
 ### Removed
 
 ## [1.0.0](https://github.com/psu-libraries/contentdmtools/releases/tag/v1.0) - 2019-08-06

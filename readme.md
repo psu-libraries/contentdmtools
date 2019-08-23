@@ -1,5 +1,5 @@
 # CONTENTdm Tools
-A set of PowerShell scripts for batch processing digital content for CONTENTdm and for batch management of existing digital collections. For those who prefer one a web-based GUI is available.
+A set of PowerShell scripts for 64-bit, parallel, batch processing of digital content and metadata for CONTENTdm and for batch management of existing digital collections. For those who prefer one a web-based GUI is available.
 
 ## PowerShell Scripts
 PowerShell is a scripting language that has been included in all versions of Windows since Windows 7. To run Powershell scripts, you need to first run a command to allow them. To do this, you will need to open PowerShell with Administrative Privileges and run the following command: `Set-ExecutionPolicy Unrestricted`. If you are unable to run PowerShell with Administrative Privileges, you can run the following command to run scripts, but it will need to be run in every PowerShell session: `powershell.exe -ExecutionPolicy bypass`.
@@ -43,5 +43,7 @@ CONTENTdm Tools uses openly-licensed tools to process images and CONTENTdm servi
 * [Ghostscript](https://ghostscript.com/) -- A tool for processing PDF files, used here to merge PDFs and downsample image resolution within PDFs.
 * [GraphicsMagick](http://www.graphicsmagick.org/) -- "The swiss army knife of image processing", used here to convert TIF to JP2, while ensuring JP2 compliance and color management.
   * [ImageMagick](https://imagemagick.org/index.php) -- GraphicsMagick itself is based on an earlier project called ImageMagick.
+* [PDFtk Server](https://www.pdflabs.com/tools/pdftk-server/) -- PDFtk Server is an open-source PDF editing tool, used here to separte pages.
+* [Xpdf](https://www.xpdfreader.com/) -- Xpdf is an open-source PDF toolkit, used here to extract text.
 * [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) -- Tesseract is the leading open-source OCR package which is currently developed by Google, used here to convert TIF to TXT and generate searchable PDFs.
 * [Universal Dashboard](https://universaldashboard.io/) -- Universal Dashboard is an open-souce, cross-platform PowerShell module for developing and hosting web-based interactive dashboards, used here to provide the CONTENTdm Tools Dashboard GUI.

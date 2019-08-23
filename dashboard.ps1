@@ -4,7 +4,11 @@
 
 # Variables
 $scriptpath = $MyInvocation.MyCommand.Path
-$dir = Split-Path $scriptpath
+$cdmt_root = Split-Path $scriptpath
+
+# Import Library
+. $cdmt_root\util\lib.ps1
+. Get-Org-Settings
 
 $HomePage = New-UDPage -Name "Home" -Content {
     New-UDLayout -Columns 2 -Content {
@@ -29,7 +33,6 @@ $Settings = New-UDPage -Name "Settings" -Content {
 
     New-UDLayout -Columns 2 -Content {
         New-UDInput -Title "Organizational Settings" -Id "orgSettings" -SubmitText "Save" -Content {
-            . $dir\util\lib.ps1;; Get-Org-Settings
             New-UDInputField -Type 'textarea' -Name 'public' -Placeholder 'https://PublicURL.org' -DefaultValue $Global:cdmt_public
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'https://AdminURL.org' -DefaultValue $Global:cdmt_server
             New-UDInputField -Type 'textbox' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
@@ -39,7 +42,7 @@ $Settings = New-UDPage -Name "Settings" -Content {
             $org | Add-Member -MemberType NoteProperty -Name public -Value $public
             $org | Add-Member -MemberType NoteProperty -Name server -Value $server
             $org | Add-Member -MemberType NoteProperty -Name license -Value $license
-            $org | Export-Csv "$dir\settings\org.csv" -NoTypeInformation
+            $org | Export-Csv "$cdmt_root\settings\org.csv" -NoTypeInformation
             $Global:cdmt_public = $public
             $Global:cdmt_server = $server
             $Global:cdmt_license = $license
@@ -52,7 +55,7 @@ $Settings = New-UDPage -Name "Settings" -Content {
             New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
             New-UDInputField -Type 'password' -Name 'password'
         } -Endpoint {
-            Param($user, $password)
+            Param($user, $password, $throttle, $staging)
             # Still need to update batchEdit to use these settings and see if the password actually works!
             $SecurePassword = $($password | ConvertTo-SecureString -AsPlainText -Force)
             if (Test-Path settings\user.csv) {
@@ -91,53 +94,56 @@ $Settings = New-UDPage -Name "Settings" -Content {
 }
 
 $Batch = New-UDPage -Name "Batches" -Content {
-
     New-UDLayout -Columns 1 -Content {
         New-UDInput -Title "Batch Create Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\batch'
-            New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue 'metadata.csv'
+            New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue "metadata.csv"
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
-            New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "skip") -DefaultValue "both"
+            New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "extract", "skip") -DefaultValue "both"
             New-UDInputField -Type 'select' -Name 'originals' -Placeholder @("Originals") -Values @("keep", "discard", "skip") -DefaultValue "keep"
         } -Endpoint {
-            Param($metadata, $jp2, $ocr, $originals, $path)
-            $scriptblock = "$dir\batchCreateCompoundObjects.ps1 -metadata $metadata -jp2 $jp2 -ocr $ocr -originals $originals -path $path"
+            Param($path, $metadata, [int16]$throttle, $jp2, $ocr, $originals)
+            $scriptblock = "$cdmt_root\batchCreateCompoundObjects.ps1 -path $path -metadata $metadata -throttle $throttle -jp2 $jp2 -ocr $ocr -originals $originals"
             Start-Process PowerShell.exe -ArgumentList "-noexit -command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Batch Create Compound Objects" -Text "The batch creation process has started in a new PowerShell window, you should see running output there. When it's complete, you can close the window. You can also close the window to cancel at any time."
+                New-UDCard -Title "Batch Create Compound Objects" -Text "Batch creation has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch.
+                `r`n------------------------------`r`nPath:`t`t$path`r`nMetadata:`t`t$csv`r`nJP2s:`t`t$jp2`r`nOCR:`t`t$ocr`r`nOriginals:`t`t$originals`r`nThrottle:`t`t$throttle`r`n------------------------------`r`nBatch Start Time:`t`t$(Get-Date)"
             )
         }
 
         New-UDInput -Title "Batch Edit Metadata" -Id "batchEdit" -SubmitText "Start" -Content {
-            . $dir\util\lib.ps1;; Get-Org-Settings
-            New-UDInputField -Type 'textarea' -Name 'metadata' -Placeholder 'C:\path\to\metadata.csv'
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
-            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
-            New-UDInputField -Type 'textbox' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
+            New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
+            New-UDInputField -Type 'textarea' -Name 'metadata' -Placeholder 'C:\path\to\metadata.csv'
+            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
         } -Endpoint {
-            Param($metadata, $collection, $user, $server, $license)
-            $scriptblock = "$dir\batchEdit.ps1 -csv $metadata -collection $collection -user $user -server $server -license $license"
+            Param($collection, $server, $license, $metadata, $user)
+            $scriptblock = "$cdmt_root\batchEdit.ps1 -collection $collection -server $server -license $license -csv $metadata  -user $user"
             Start-Process PowerShell.exe -ArgumentList "-noexit -command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Batch Edit Metadata" -Text "The batch edit has started in a new PowerShell window, you should see running output there. When it's complete, you can close the window. You can also close the window to cancel at any time."
+                New-UDCard -Title "Batch Edit Metadata" -Text "Batch edit has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch.
+                `r`n------------------------------`r`nCollection:`t`t$collection`r`nServer:`t`t$server`r`nLicense:`t`t$license`r`nMetadata:`t`t$metdata`r`n`User:`t`t$user`r`n------------------------------`r`nBatch Start Time`t`t$(Get-Date)"
             )
         }
 
-        New-UDInput -Title "Batch OCR/Re-OCR a Collection" -Id "batchOCR" -SubmitText "Start" -Content {
-            New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
+        New-UDInput -Title "Batch OCR a Collection" -Id "batchOCR" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
             New-UDInputField -Type 'textbox' -Name 'field' -Placeholder 'Fulltext Field'
-            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
             New-UDInputField -Type 'textarea' -Name 'public' -Placeholder 'URL for Public UI' -DefaultValue $Global:cdmt_public
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
-            New-UDInputField -Type 'textbox' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
+            New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
+            New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
+            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
+            #New-UDInputField -Type 'select' -Name 'method' -Placeholder "Download Method" -Values @("API", "IIIF") -DefaultValue "API"
         } -Endpoint {
-            Param($path, $collection, $field, $user, $public, $server, $license)
-            $scriptblock = "$dir\batchOCR.ps1 -collection $collection -field $field -path $path -user $user -public $public -server $server -license $license"
+            Param($collection, $field, $public, $server, $license, $path, $user, $throttle, $method)
+            $scriptblock = "$cdmt_root\batchOCR.ps1 -collection $collection -field $field -public $public -server $server -license $license -path $path -user $user -throttle $throttle" #-method $method"
             Start-Process PowerShell.exe -ArgumentList "-noexit -command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Re-OCR a Collection" -Text "The batch re-OCR has started in a new PowerShell window, you should see running output there. When it's complete, you can close the window. You can also close the window to cancel at any time."
+                New-UDCard -Title "Batch OCR a Collection" -Text "Batch OCR has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch. `r`n------------------------------`r`nCollection:`t`t$collection`r`nField:`t`t$field`r`nPublic:`t`t$public`r`nServer:`t`t$server`r`nLicense:`t`t$license`r`nUser:`t`t$user`r`nPath:`t`t$path`r`nThrottle:`t`t$throttle`r`n------------------------------`r`nBatch Start Time:`t`t$(Get-Date)"
             )
         }
     }
@@ -184,7 +190,7 @@ $Navigation = New-UDSideNav -Content {
     }
 }
 
-Enable-UDLogging -Level Info -FilePath "$dir\logs\dashboard_log.txt" #-Console
+Enable-UDLogging -Level Info -FilePath "$cdmt_root\logs\dashboard_log.txt" #-Console
 
 $theme = New-UDTheme -Name "cdm-tools" -Definition @{
     '::placeholder'                 = @{

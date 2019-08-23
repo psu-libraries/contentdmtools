@@ -13,7 +13,7 @@ and create within each compound object subdirectory
   * create a 200 ppi searchable PDF for the entire compound object, saved in the compound object subdirectory, and
 * move TIF images into an `originals` subdirectory.
 
-By combining parameters, you can create different types of batches based on your need.
+By combining parameters, you can create different types of batches based on your need. E.g.
 * Metadata only output (skip JP2 and OCR outputs, skip originals handling)
 * Processes existing TIF and JP2s into CONTENTdm load packages
 * Skip OCR for visual resources
@@ -25,15 +25,15 @@ By combining parameters, you can create different types of batches based on your
 3. Save metadata for all compound objects in the root directory of the batch as a CSV file named `metadata.csv`.
     * Metadata may first be created using Excel or another progam and converted to CSV.
     * Always use UTF-8 character encoding when editing and saving.
-    * All fields from the collections Field Properties need to be present and conform to any data types or other validations.
-      * `Title` should always be the first column. It will soon be the second when you add `Directory`.
-    * **Two additional fields will be needed**
-      * `Directory` as the first column, followed by `Title`. This should contain the name of the subdirectory where the compound object files are stored in the batch directory.
-      * `File Name` as the last column.
+    * All required fields from the collection's Field Properties need to be present and conform to any data types or other validations. Other fields may be included or excluded as desired.
+    * **One additional fields is needed**
+      * `Directory` must be the first column and contain the name of the subdirectory where the compound object files are stored in the batch directory.
+    * `Title` should always be the second column.
 4. Open PowerShell and navigate to where [contentdm-tools](https://github.com/psu-libraries/contentdmtools) are saved. It may be easier to navigate to this folder using Windows File Explorer and holding the shift key while right-clicking to select "Open PowerShell window here."
 5. Use the command `batchCreateCompoundObjects.ps1 -path C:\path\to\batch` to process batch of compound objects as described above. The outputs can be customized by using the following parameters:
      * `-metadata` specifies the path and filename for a CSV of metadata.
        * DEFAULT value is `metadata.csv`. Any file is assumed to be in the root directory of `-path`.
+     * `-throttle` specifies the number of CPU cores to use for parallel processing (JP2 conversion and OCR).
      * `-jp2` indicates whether or not you need to generate JP2 images. This is useful for vended digization. (PDFs can also be passed through, just use the appropriate `-ocr` option.)
        * `true` if you are starting with only TIF images and need to generate JP2 images. DEFAULT.
        * `false` if you are starting with TIF and JP2 images and only need to organize them.
@@ -42,6 +42,7 @@ By combining parameters, you can create different types of batches based on your
        * `text` to only generate TXT transcripts.
        * `PDF` to only generate a 200 ppi searchable PDF.
        * `both` to generate both TXT transcripts and a searchable PDF. DEFAULT.
+       * `extract` to extract a TXT file from an existing PDF included in the object subdirectory.
        * `skip` to bypass any OCR actions.
      * `-originals`  will specify what to do with the original TIF images.
        * `keep` to save the originals. DEFAULT.
@@ -67,3 +68,4 @@ By combining parameters, you can create different types of batches based on your
 * [Monograph compound objects](https://help.oclc.org/Metadata_Services/CONTENTdm/Compound_objects/Add_multiple_compound_objects/Directory_structure#Monographs), or compound objects with defined structure, such as Sections or Chapters, have not been tested but should work.
 * Picture Cube and Postcard compound objects have not been tested.
 * This script has only been tested on Windows Powershell 5.1 but might work on other platforms with Powershell Core 6+.
+* Item-level metadata is derived using JP2 files. If you are not generating or including JP2 files, item-level metadata will not be generated.

@@ -5,10 +5,10 @@
 
 # Setup directories
 $scriptpath = $MyInvocation.MyCommand.Path
-$dir = Split-Path $scriptpath
-If (!(Test-Path "$dir\settings")) { New-Item -ItemType Directory -Path "$dir\settings" | Out-Null }
-If (!(Test-Path "$dir\logs")) { New-Item -ItemType Directory -Path "$dir\logs" | Out-Null }
-$log = "$dir\logs\setupNonAdmin_log" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt"
+$cdmt_root = Split-Path $scriptpath
+If (!(Test-Path "$cdmt_root\settings")) { New-Item -ItemType Directory -Path "$cdmt_root\settings" | Out-Null }
+If (!(Test-Path "$cdmt_root\logs")) { New-Item -ItemType Directory -Path "$cdmt_root\logs" | Out-Null }
+$log = "$cdmt_root\logs\setupNonAdmin_log" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt"
 
 Write-Output "Setting up some dependencies for the CONTENTdm Tools Dashboard. If you see warnings about modules currently being used, you can safely ignore them." | Tee-Object -FilePath $log -Append
 
