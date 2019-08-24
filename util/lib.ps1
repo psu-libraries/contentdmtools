@@ -305,6 +305,48 @@ Workflow Convert-to-Text-And-PDF {
     }
 }
 
+function Convert-to-Text-And-PDF-ABBYY {
+    Param(
+        [Parameter()]
+        [string]
+        $path,
+
+        [Parameter()]
+        [string]
+        $object,
+
+        [Parameter()]
+        [string]
+        $log_batchCreate
+    )
+    
+    $abbyy_staging = O:\pcd\cho-cdm\staging
+    $abbyy_both_in = O:\pcd\cho-cdm\input
+    $abbyy_both_out = O:\pcd\cho-cdm\output
+    
+    $tifs = (Get-ChildItem *.tif* -Path $path\$object -Recurse).count
+    $txts = (Get-ChildItem *.txt -Path $abbyy_text_out\$object -Recurse).count
+
+    New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null   
+
+    . Copy-Tif $path $object $throttle $abbyy_staging $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
+
+    Move-Item $abbyy_staging\$object $abbyy_both_in 2>&1 | Tee-Object -file $log_batchCreate -Append
+    
+    while ($tifs -ne $txts) { Start-Sleep -Seconds 15 }
+
+    Get-ChildItem * -Path $abbyy_both_out\$object | ForEach-Object {
+        Move-Item -Path $_ -Destination $path\$object\transcripts  2>&1 | Tee-Object -file $log_batchCreate -Append
+    }
+
+    . Merge-PDF $path $object $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
+
+    Move-Item $path\$object\transcripts\$object.pdf $path\$object\$object.pdf 2>&1 | Tee-Object -file $log_batchCreate -Append
+
+    Remove-Item $abbyy_both_out\$object 2>&1 | Tee-Object -file $log_batchCreate -Append
+
+}
+
 Workflow Convert-to-Text {
     Param(
         [Parameter()]
@@ -321,7 +363,7 @@ Workflow Convert-to-Text {
 
         [Parameter()]
         [string]
-        $log,
+        $log_batchCreate,
 
         [Parameter()]
         [string]
@@ -344,6 +386,47 @@ Workflow Convert-to-Text {
     }
 }
 
+function Convert-to-Text-ABBYY {
+    Param(
+        [Parameter()]
+        [string]
+        $path,
+
+        [Parameter()]
+        [string]
+        $object,
+
+        [Parameter()]
+        [string]
+        $throttle,
+
+        [Parameter()]
+        [string]
+        $log_batchCreate
+    )
+
+    $abbyy_staging = O:\pcd\text\staging
+    $abbyy_text_in = O:\pcd\text\input
+    $abbyy_text_out = O:\pcd\text\output
+    
+    $tifs = (Get-ChildItem *.tif* -Path $path\$object -Recurse).count
+    $txts = (Get-ChildItem *.txt -Path $abbyy_text_out\$object -Recurse).count
+    
+    New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null   
+
+    . Copy-Tif $path $object $throttle $abbyy_staging $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
+
+    Move-Item $abbyy_staging\$object $abbyy_text_in 2>&1 | Tee-Object -file $log_batchCreate -Append
+    
+    while ($tifs -ne $txts) { Start-Sleep -Seconds 15 }
+
+    Get-ChildItem *.txt -Path $abbyy_text_out\$object | ForEach-Object {
+        Move-Item -Path $_ -Destination $path\$object\transcripts  2>&1 | Tee-Object -file $log_batchCreate -Append
+    }
+
+    Remove-Item $abbyy_text_out\$object 2>&1 | Tee-Object -file $log_batchCreate -Append
+}
+
 Workflow Convert-to-PDF {
     Param(
         [Parameter()]
@@ -360,7 +443,7 @@ Workflow Convert-to-PDF {
 
         [Parameter()]
         [string]
-        $log,
+        $log_batchCreate,
 
         [Parameter()]
         [string]
@@ -380,6 +463,53 @@ Workflow Convert-to-PDF {
         #Invoke-Expression "$gm mogrify -format tif -colorspace gray $fulltmp" 2>&1 | Tee-Object -FilePath $log -Append
         Invoke-Expression "$tesseract $path\$object\$file $path\$object\transcripts\$basefilename pdf quiet"
         #Remove-Item $path\$object\$tmp
+    }
+}
+
+function Convert-to-PDF-ABBYY {
+    Param(
+        [Parameter()]
+        [string]
+        $path,
+
+        [Parameter()]
+        [string]
+        $object,
+
+        [Parameter()]
+        [int16]
+        $throttle,
+
+        [Parameter()]
+        [string]
+        $log_batchCreate
+
+    )
+    $abbyy_staging = O:\pcd\many2pdf-high\staging
+    $abbyy_pdf_in = O:\pcd\many2pdf-high\input
+    $abbyy_pdf_out = O:\pcd\many2pdf-high\output
+    
+    $pdf = ($abbyy_pdf_out + "\" + $object + ".pdf")
+    $txt = ($abbyy_pdf_out + "\" + $object + ".txt")
+    
+    New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null   
+    
+    . Copy-Tif $path $object $throttle $abbyy_staging $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
+
+    Move-Item $abbyy_staging\$object $abbyy_pdf_in 2>&1 | Tee-Object -file $log_batchCreate -Append
+
+    while (!(Test-Path $pdf)) { 
+        Start-Sleep 10
+    }
+    
+    Move-Item $pdf $path\$object 2>&1 | Tee-Object -file $log_batchCreate -Append
+    Remove-Item $txt 2>&1 | Tee-Object -file $log_batchCreate -Append
+}
+
+Workflow Copy-Tif ($path,$object,$throttle,$abbyy_staging,$log_batchCreate) {
+    $files = Get-ChildItem *.tif* -Path $path\$object -Recurse
+    foreach -Parallel -Throttle $throttle ($file in $files) {    
+        Copy-Item -Path $file.FullName -Destination $abbyy_staging\$object  2>&1 | Tee-Object -file $log_batchCreate -Append
     }
 }
 

@@ -101,10 +101,11 @@ $Batch = New-UDPage -Name "Batches" -Content {
             New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
             New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "extract", "skip") -DefaultValue "both"
+            New-UDInputField -Type 'select' -Name 'ocrengine' -Placeholder "OCR Engine" -Values @("ABBYY", "tesseract") -DefaultValue "ABBYY"
             New-UDInputField -Type 'select' -Name 'originals' -Placeholder @("Originals") -Values @("keep", "discard", "skip") -DefaultValue "keep"
         } -Endpoint {
-            Param($path, $metadata, [int16]$throttle, $jp2, $ocr, $originals)
-            $scriptblock = "$cdmt_root\batchCreateCompoundObjects.ps1 -path $path -metadata $metadata -throttle $throttle -jp2 $jp2 -ocr $ocr -originals $originals"
+            Param($path, $metadata, [int16]$throttle, $jp2, $ocr, $ocrengine, $originals)
+            $scriptblock = "$cdmt_root\batchCreateCompoundObjects.ps1 -path $path -metadata $metadata -throttle $throttle -jp2 $jp2 -ocr $ocr -ocrengine $ocrengine -originals $originals"
             Start-Process PowerShell.exe -ArgumentList "-noexit -command $scriptblock"
             New-UDInputAction -Content @(
                 New-UDCard -Title "Batch Create Compound Objects" -Text "Batch creation has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch.

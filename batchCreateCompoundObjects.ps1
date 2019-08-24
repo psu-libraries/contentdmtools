@@ -19,6 +19,11 @@ Param(
     $ocr = 'both',
 
     [Parameter()]
+    [string]
+    [ValidateSet('ABBYY', 'tesseract')]
+    $ocrengine = 'ABBYY',
+
+    [Parameter()]
     [ValidateSet('keep', 'discard', 'skip')]
     [string]
     $originals = 'keep',
@@ -59,7 +64,12 @@ Write-Output "Batch metadata will be split into tab-d compound-object metadata f
 $o = 0
 ForEach ($object in $objects.keys) {
     $o++
-    Write-Output " $(. Get-TimeStamp) Starting $object ($o of $($objects.Count) objects)." | Tee-Object -file $log_batchCreate -Append    
+    Write-Output " $(. Get-TimeStamp) Starting $object ($o of $($objects.Count) objects)." | Tee-Object -file $log_batchCreate -Append
+    
+    ### Need function here to handle redacted tiffs -- move unredacted to another directory in the batch
+
+
+
     $tiffs = (Get-ChildItem *.tif* -Path $path\$object  -Recurse).Count
     if ($jp2 -eq "true") {
         # Find the TIF files, convert them to JP2, and move them to a scans subdirectory within the object.
@@ -88,8 +98,13 @@ ForEach ($object in $objects.keys) {
     if ($ocr -eq "both") {
         Write-Output "        OCR starting (PDF and TXT output)..." | Tee-Object -file $log_batchCreate -Append
         if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
-        & Convert-to-Text-And-PDF $path $object $throttle $log_batchCreate $gm $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
-        & Merge-PDF $path $object $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
+        if ($ocrengine -eq "ABBYY") {
+            . Convert-to-Text-And-PDF $path $object $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
+        }
+        elseif ($ocrengine -eq "tesseract") {
+            & Convert-to-Text-And-PDF $path $object $throttle $log_batchCreate $gm $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
+            & Merge-PDF $path $object $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
+        }
         Get-ChildItem -Path $path\$object\transcripts *.txt -Recurse | ForEach-Object {
             . Optimize-OCR -ocrText $_.FullName  2>&1 | Tee-Object -file $log_batchCreate -Append
         }
@@ -100,7 +115,12 @@ ForEach ($object in $objects.keys) {
     elseif ($ocr -eq "text") {
         Write-Output "        OCR starting (TXT output)..." | Tee-Object -file $log_batchCreate -Append
         if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
-        & Convert-to-Text $path $object $throttle $log_batchCreate $gm $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
+        if ($ocrengine -eq "ABBYY") {
+            . Convert-to-Text-ABBYY  $path $object $throttle $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
+        }
+        elseif ($ocrengine -eq "tesseract") {
+            & Convert-to-Text $path $object $throttle $log_batchCreate $gm $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
+        }
         Get-ChildItem -Path $path\$object\transcripts *.txt -Recurse | ForEach-Object {
             . Optimize-OCR -ocrText $_.FullName  2>&1 | Tee-Object -file $log_batchCreate -Append
         }
@@ -111,9 +131,14 @@ ForEach ($object in $objects.keys) {
     elseif ($ocr -eq "pdf") {
         Write-Output "        OCR starting (PDF output)..." | Tee-Object -file $log_batchCreate -Append
         if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
-        & Convert-to-PDF $path $object $throttle $log_batchCreate $gm $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
-        & Merge-PDF $path $object $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
-        Remove-Item $path\$object\transcripts -Recurse | Out-Null
+        if ($ocrengine -eq "ABBYY") {
+            . Convert-to-PDF-ABBYY $path $object $throttle $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append
+        }
+        elseif ($ocrengine -eq "tesseract") {
+            & Convert-to-PDF $path $object $throttle $log_batchCreate $gm $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
+            & Merge-PDF $path $object $log_batchCreate 2>&1 | Tee-Object -file $log_batchCreate -Append   
+            Remove-Item $path\$object\transcripts -Recurse | Out-Null
+        }
         $pdfs = (Get-ChildItem *.pdf -Path $path\$object  -Recurse).Count
         Write-Output "        OCR complete: $tiffs TIFs and $pdfs PDF. $(. Get-TimeStamp)" | Tee-Object -file $log_batchCreate -Append
         
