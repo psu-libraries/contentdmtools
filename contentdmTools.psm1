@@ -1,10 +1,23 @@
+# Set up some helper variables to make it easier to work with the module
+$script:PSModule = $ExecutionContext.SessionState.Module
+$script:PSModuleRoot = $script:PSModule.ModuleBase
+$binaryModuleRoot = $script:PSModuleRoot
+
 # Variables
-$tesseract = "$PSScriptRoot\util\tesseract\tesseract.exe"
+$tesseract = "$binaryModuleRoot\util\tesseract\tesseract.exe"
 $gs = "$PSScriptRoot\util\gs\bin\gswin64c.exe"
 $gm = "$PSScriptRoot\util\gm\gm.exe"
 $adobe = "$PSScriptRoot\util\icc\sRGB_v4.icc"
 $pdftk = "$PSScriptRoot\util\pdftk\bin\pdftk.exe"
 $pdf2text = "$PSScriptRoot\util\xpdf\pdftotext.exe"
+
+function where-tesseract {
+    Write-Host $tesseract
+}
+
+function where-ghostscripts {
+    Write-Host $gs
+}
 
 function Get-TimeStamp {
     return "[{0:yyyy-MM-dd} {0:HH:mm:ss}]" -f (Get-Date)
