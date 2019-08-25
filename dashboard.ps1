@@ -33,9 +33,9 @@ $Settings = New-UDPage -Name "Settings" -Content {
 
     New-UDLayout -Columns 2 -Content {
         New-UDInput -Title "Organizational Settings" -Id "orgSettings" -SubmitText "Save" -Content {
-            New-UDInputField -Type 'textarea' -Name 'public' -Placeholder 'https://PublicURL.org' -DefaultValue $Global:cdmt_public
-            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'https://AdminURL.org' -DefaultValue $Global:cdmt_server
-            New-UDInputField -Type 'textbox' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
+            New-UDInputField -Type 'textarea' -Name 'public' -Placeholder 'https://PublicURL.org' -DefaultValue $Module:cdmt_public
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'https://AdminURL.org' -DefaultValue $Module:cdmt_server
+            New-UDInputField -Type 'textbox' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Module:cdmt_license
         } -Endpoint {
             Param($public, $server, $license)
             $org = New-Object -TypeName psobject
@@ -43,11 +43,11 @@ $Settings = New-UDPage -Name "Settings" -Content {
             $org | Add-Member -MemberType NoteProperty -Name server -Value $server
             $org | Add-Member -MemberType NoteProperty -Name license -Value $license
             $org | Export-Csv "$cdmt_root\settings\org.csv" -NoTypeInformation
-            $Global:cdmt_public = $public
-            $Global:cdmt_server = $server
-            $Global:cdmt_license = $license
+            $Module:cdmt_public = $public
+            $Module:cdmt_server = $server
+            $Module:cdmt_license = $license
             New-UDInputAction -Content @(
-                New-UDCard -Title "Organizational Settings" -Text "Organizational Settings Saved`r`n------------------------------`r`nPublic: $Global:cdmt_public`r`nServer: $Global:cdmt_server`r`nLicense: $Global:cdmt_license"
+                New-UDCard -Title "Organizational Settings" -Text "Organizational Settings Saved`r`n------------------------------`r`nPublic: $Module:cdmt_public`r`nServer: $Module:cdmt_server`r`nLicense: $Module:cdmt_license"
             )
         }
 
@@ -115,8 +115,8 @@ $Batch = New-UDPage -Name "Batches" -Content {
 
         New-UDInput -Title "Batch Edit Metadata" -Id "batchEdit" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
-            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
-            New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Module:cdmt_server
+            New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Module:cdmt_license
             New-UDInputField -Type 'textarea' -Name 'metadata' -Placeholder 'C:\path\to\metadata.csv'
             New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
         } -Endpoint {
@@ -132,9 +132,9 @@ $Batch = New-UDPage -Name "Batches" -Content {
         New-UDInput -Title "Batch OCR a Collection" -Id "batchOCR" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
             New-UDInputField -Type 'textbox' -Name 'field' -Placeholder 'Fulltext Field'
-            New-UDInputField -Type 'textarea' -Name 'public' -Placeholder 'URL for Public UI' -DefaultValue $Global:cdmt_public
-            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
-            New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
+            New-UDInputField -Type 'textarea' -Name 'public' -Placeholder 'URL for Public UI' -DefaultValue $Module:cdmt_public
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Module:cdmt_server
+            New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Module:cdmt_license
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
             New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
             New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
@@ -151,7 +151,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
 
     New-UDLayout -Columns 2 -Content {
         New-UDInput -Title "Published Collection Alias Look Up" -Id "getCollections" -SubmitText "Submit" -Content {
-            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Module:cdmt_server
         } -Endpoint {
             Param($server)
             $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionList/json"
@@ -162,7 +162,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
 
         New-UDInput -Title "Collection Field Properties Look Up" -Id "getCollProp" -SubmitText "Submit" -Content {
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
-            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Module:cdmt_server
         } -Endpoint {
             Param($collection, $server)
             $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionFieldInfo/$collection/json"

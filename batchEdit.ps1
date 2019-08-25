@@ -1,23 +1,51 @@
 # batchEdit.ps1
-# https://github.com/psu-libraries/contentdmtools
+<#
+    .SYNOPSIS
+    Pass a CSV of bulk metadata changes to CONTENTdm using CONTENTdm Catcher.
+    .DESCRIPTION
+    Read stored organizational settings if none were supplied, grab the stored user password prompt the user to enter a password, read in CSV of metadata, use the CONTENTdm API to lookup the type of each record and group objects first, write a SOAP XML update record for each change and send it to CONTENTdm Catcher.
+    .PARAMETER csv
+    The filepath and name to a CSV of changed metadata for a CONTENTdm collection. Must use field nicknames as headers, not field names.
+    .PARAMETER user
+    The user name of a CONTENTdm user.
+    .PARAMETER collection
+    The collection alias for a CONTENTdm collection.
+    .PARAMETER server
+    The URL for the Admin UI for a CONTENTdm instance.
+    .PARAMETER license
+    The license number for a CONTENTdm instance.
+    .EXAMPLE
+    .\batchEdit.ps1 -csv E:\benson\changes.csv -user dfj32 -collection transa -public https://digital.libraries.psu.edu -server https://urlToAdministrativeServer.edu -license XXXX-XXXX-XXXX-XXXX -path "E:\benson"  -throttle 8 -method IIIF
+    .INPUTS
+    System.String
+    .NOTES
+    Required fields and controlled vocabularies must be disabled in the Admin UI or CONTENTdm Cathcer will fail.
+    .LINK
+    https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchEdit.md
+#>
 
 # Read in the metadata changes with -csv path, pass the collection alias with -collection collectionAlias.
 [cmdletbinding()]
-param (
-    [Parameter()]
-    [string]$csv = "metadata.csv",
-
-    [Parameter(Mandatory = $true)]
-    [string]$user = $(Throw "Use -user to specify the CONTENTdm user."),
-
-    [Parameter(Mandatory = $true)]
-    [string]$collection = $(Throw "Use -collection to specify a collection."),
+Param (
+    [Parameter(Mandatory)]
+    [string]
+    $collection = $(Throw "Use -collection to specify the collection."),
 
     [Parameter()]
-    [string]$server,
+    [string]
+    $server = $(Throw "Use -public to specify a URL for the Admin UI for a CONTENTdm instance."),
 
     [Parameter()]
-    [string]$license
+    [string]
+    $license = $(Throw "Use -public to specify the license number for a CONTENTdm instance."),
+
+    [Parameter(Mandatory)]
+    [string]
+    $csv = $(Throw "Use -csv to speecify the filepath and name to a CSV of changed metadata for a CONTENTdm collection"),
+
+    [Parameter(Mandatory)]
+    [string]
+    $user = $(Throw "Use -user to specify the CONTENTdm user.")
 )
 
 # Variables
@@ -66,7 +94,8 @@ if (Test-Path $cdmt_root\settings\user.csv) {
         $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
         $null = $BSTR
     }
-} Else {
+}
+Else {
     Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard." | Tee-Object -Filepath $log_batchEdit -Append
     [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
     $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
@@ -85,7 +114,9 @@ foreach ($header in $metadata[0].psobject.Properties) {
         $fields.nick = $header
     }
 } #>
-$metadata | Select-Object *, @{Name = 'Level'; Expression = { '' } } | Export-CSV -Path "$cdmt_root\tmp1.csv" -NoTypeInformation
+
+# Try using ConvertFrom-CSV here to eliminate these tmp files.
+$metadata = $metadata | Select-Object *, @{Name = 'Level'; Expression = { '' } } | Export-CSV -Path "$cdmt_root\tmp1.csv" -NoTypeInformation
 $metadata = Import-Csv -Path "$cdmt_root\tmp1.csv"
 
 
@@ -137,15 +168,22 @@ ForEach ($record in $metadata) {
 
     Write-Output "$(. Get-TimeStamp) SOAP XML created for dmrecord $dmrecord, sending it to Catcher..." | Tee-Object -Filepath $log_batchEdit -Append
     Try {
-        . Send-SOAPRequest $SOAPRequest https://worldcat.org/webservices/contentdm/catcher?wsdl $editCount | Tee-Object -Filepath $log_batchEdit -Append; if ($? -eq $true) { $editCount++ }
+        . Send-SOAPRequest $SOAPRequest https://worldcat.org/webservices/contentdm/catcher?wsdl $editCount | Tee-Object -Filepath $log_batchEdit -Append
+        if ($?) { $editCount++ }
+        if ($Return -contains "Error") {
+            $editCount--
+        }
+        #else { $editCount-- }
         # DEBUGGING: Comment out the Send-SOAPRequest above and remove the comment from the two lines below to log soap. WARNING PASSWORDS EXPOSED
         #$soap = "$cdmt_root\logs\" + $collection + "_" + $record.dmrecord + ".xml"
         #Write-Output $SOAPRequest | Out-File -FilePath $soap
     }
     Catch {
-        if ($? -eq $true) { $editCount=$editCount-1 }
         Write-Host "ERROR ERROR ERROR" -Fore "red" | Tee-Object -file $log_batchEdit -Append
         Write-Output $Return | Tee-Object -Filepath $log_batchEdit -Append
+        if ($Return -contains "Error") {
+            $editCount--
+        }
         Write-Output "---------------------" | Tee-Object -file $log_batchEdit -Append
         Write-Host "  $(. Get-TimeStamp) Unknown error, dmrecord $dmrecord not updated." -Fore "red" | Tee-Object -file $log_batchEdit -Append
         Write-Output "  $(. Get-TimeStamp) Unknown error, dmrecord $dmrecord not updated." | Out-File -Filepath $log_batchEdit -Append
@@ -153,7 +191,7 @@ ForEach ($record in $metadata) {
 }
 
 # Cleanup the tmp files
-Remove-Item "$cdmt_root\tmp*.csv" -Force -ErrorAction SilentlyContinue | Out-Null
+#Remove-Item "$cdmt_root\tmp*.csv" -Force -ErrorAction SilentlyContinue | Out-Null
 
 Write-Output "----------------------------------------------" | Tee-Object -file $log_batchEdit -Append
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Edit Complete." | Tee-Object -file $log_batchEdit -Append
