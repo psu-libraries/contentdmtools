@@ -79,6 +79,7 @@ Write-Output "----------------------------------------------" | Tee-Object -file
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Create Compound Objects Starting." | Tee-Object -file $log_batchCreate -Append
 Write-Output "Batch Location: $path" | Tee-Object -file $log_batchCreate -Append
 Write-Output "Number of directories in batch: $cdmt_rootCount" | Tee-Object -file $log_batchCreate -Append
+Write-Output ("Executed Command:   " + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "----------------------------------------------" | Tee-Object -file $log_batchCreate -Append
 
 # Read in the metadata, trim whitespaces, and export object-level meatadata for each object into directory structure.

@@ -75,19 +75,18 @@ param(
 # Variables
 $scriptpath = $MyInvocation.MyCommand.Path
 $cdmt_root = Split-Path $scriptpath
+$tesseract = "$cdmt_root\util\tesseract\tesseract.exe"
+$gm = "$cdmt_root\util\gm\gm.exe"
 $path = $(Resolve-Path "$path")
 if (!(Test-Path $cdmt_root\logs)) { New-Item -ItemType Directory -Path $cdmt_root\logs | Out-Null }
 $log_batchOCR = ($cdmt_root + "\logs\batchOCR_" + $collection + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
-$nonImages = 0
-$ocrCount = 0
-$pages2ocr = $null
-$pages2ocr = @{ }
 
 # Import library
 . $cdmt_root\util\lib.ps1
 
+$start = Get-Date
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR
-Write-Output "$(. Get-Timestamp) CONTENTdm Tools Batch OCR Starting." | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch OCR Starting." | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Collection Alias:   $collection" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Transcript Field:   $field" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Public URL:         $public" | Tee-Object -FilePath $log_batchOCR -Append
@@ -97,12 +96,13 @@ Write-Output "Staging Path:       $path" | Tee-Object -FilePath $log_batchOCR -A
 Write-Output "User:               $user" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Throttle:           $throttle" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Method:             $method" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output ("Executed Command:   " + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
 
 try { Test-Path $path | Out-Null }
 catch {
     Write-Error "Error: Check the path to staging. Close this window at any time." | Tee-Object -FilePath $log_batchOCR -Append
-    return
+    return $Return
 }
 
 $path = "$path\tmp"
@@ -124,57 +124,76 @@ if (Test-Path $cdmt_root\settings\org.csv) {
 } # error handling if no org settings? Or will user be prompted?
 
 Write-Output "$(. Get-TimeStamp) Generating a list of images for the collection..." | Tee-Object -FilePath $log_batchOCR -Append
-$nonImages = (. Get-Images-List -server $server -collection $collection -nonImages $nonImages -pages2ocr $pages2ocr -path $path)# | Tee-Object -FilePath $log_batchOCR -Append
+$nonImages = . Get-Images-List -server $server -collection $collection -path $path | Tee-Object -FilePath $log_batchOCR -Append
+Write-Verbose "nonImages is $nonImages"
+
+$total = ($(Import-Csv $path\items.csv) | Measure-Object).Count
 
 if ($method -eq "API") {
-    Write-Output ("$(. Get-TimeStamp) Downloading " + $pages2ocr.count + " images from CONTENTdm using the API...") | Tee-Object -FilePath $log_batchOCR -Append
-    . Get-Images-Using-API -path $path -server $server -collection $collection -public $public -throttle $throttle | Tee-Object -FilePath $log_batchOCR -Append
+    Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using the API...") | Tee-Object -FilePath $log_batchOCR -Append
+   . Get-Images-Using-API-2 -path $path -server $server -collection $collection -public $public -throttle $throttle -log $log_batchOCR | Tee-Object -FilePath $log_batchOCR -Append
+    if ($LastExitCode -eq 1) {
+        Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
+        Return
+    }
 }
 elseif ($method -eq "IIIF") {
     # Not working yet -- 2019-08-23
-    Write-Output ("$(. Get-TimeStamp) Downloading " + $pages2ocr.count + " images from CONTENTdm using IIIF...") | Tee-Object -FilePath $log_batchOCR -Append
+    Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using IIIF...") | Tee-Object -FilePath $log_batchOCR -Append
     . Get-Images-Using-IIIF -public $public -collection $collection -throttle $throttle -path $path | Tee-Object -FilePath $log_batchOCR -Append
+    if ($LastExitCode -eq 1) {
+        Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
+        Return
+    }
 }
 
 Write-Output "$(. Get-TimeStamp) Running Tesseract OCR on images..." | Tee-Object -FilePath $log_batchOCR -Append
-$ocrCount = (. Update-OCR -path $path -throttle $throttle -collection $collection -field $field -ocrCount $ocrCount $gm $tesseract) | Tee-Object -FilePath $log_batchOCR -Append
+$return = . Update-OCR -path $path -throttle $throttle -collection $collection -field $field -gm $gm -tesseract $tesseract | Tee-Object -FilePath $log_batchOCR -Append
+$ocrCount = $return[0]
+$nonText = $return[1]
+Write-Verbose "ocrCount is $ocrCount"
+Write-Verbose "nonText is $nonText"
 
-# Remove items that have blank OCR output
-if (Test-Path $path\ocr.csv) {
-    $csv = Import-CSV  $path\ocr.csv
-}
-else {
-    Write-Output "There was an error before the OCR metadata file for Batch Edit could be created."
+if (!(Test-Path $path\ocr.csv)) {
+    Write-Error "(. Get-TimeStamp) An error occured before the OCR metadata CSV for Batch Edit could be created. Exiting Batch OCR."
     Return
 }
-$noText = ($csv | Where-Object { $_.$field -eq "" }).count
-$csv | Select-Object -Property dmrecord, "$field" | Where-Object { $_.$field -ne "" } | Export-CSV $path\ocr.csv -NoTypeInformation
+
+# Remove blank rows from the CSV (no text)
+Import-Csv $path\ocr.csv | Where-Object { $_.$field -ne "" } | Export-CSV $path\ocr_clean.csv -NoTypeInformation
+
+#$csv | Select-Object -Property dmrecord, "$field" | Where-Object { $_.$field -ne "" } | Export-CSV $path\ocr.csv -NoTypeInformation
 
 Write-Output "$(. Get-TimeStamp) Running Batch Edit to send updated OCR text to CONTENTdm..." | Tee-Object -FilePath $log_batchOCR -Append
-$csvRows = (Import-CSV $path\ocr.csv).count
+$csvRows = (Import-CSV $path\ocr_clean.csv).count
 $ScriptBlock = {
     $cdmt_root = $args[0]
-    $path = $args[1]
-    $collection = $args[2]
-    $user = $args[3]
-    $server = $args[4]
-    $license = $args[5]
-    & $cdmt_root\batchEdit.ps1 -csv $path\ocr.csv -collection $collection -user $user -server $server -license $license | Tee-Object -FilePath $log_batchOCR -Append
+    $collection = $args[1]
+    $server = $args[2]
+    $license = $args[3]
+    $path = $args[4]
+    $user = $args[5]
+    $csv = ($path+"\ocr_clean.csv")
+
+    . $cdmt_root\batchEdit.ps1 -collection $collection -server $server -license $license -csv $csv -user $user
 }
-Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $cdmt_root, $path, $collection, $user, $server, $license
+Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $cdmt_root, $collection, $server, $license, $path, $user 2>&1 | Tee-Object -FilePath $log_batchOCR -Append
 
 # Cleanup the tmp files
 #Remove-Item $path -Recurse -Force | Tee-Object -FilePath $log_batchOCR -Append
 
+$end = Get-Date
+$runtime = New-TimeSpan -Start $start -End $end
+
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Re-OCR Complete." | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Total Elapsed Time: $runtime"
 Write-Output "Collection Alias: $collection" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Batch Log: $log_batchOCR" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Number of collection item with images:     $($pages2ocr.count)" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Number of collection items without images: $nonImages" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Number of items OCRed:          $ocrCount" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Number of items without text:   $noText" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Number of item updates sent:    $csvRows" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Items with images:     $total" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Items without images:  $nonImages" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Images for OCR:        $csvRows" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Images processed:      $ocrCount" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Images without text:   $nonText" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "---------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Warning "The QC report numbers may not be valid. As of 2019-08-23 some of the variables are not reporting correctly."
-Write-Host -ForegroundColor Green "This window can be closed at anytime. Don't forget to index the collection!"
+Write-Host -ForegroundColor Green "Read the Batch Edit report to see if any OCR updates were successfully sent to CONTENTdm. Don't forget to index the collection to save any edits. This window can be closed at anytime."

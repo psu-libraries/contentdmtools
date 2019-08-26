@@ -60,13 +60,15 @@ $editCount = 0
 Write-Output "----------------------------------------------" | Tee-Object -file $log_batchEdit
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Edit Starting." | Tee-Object -file $log_batchEdit -Append
 Write-Output "Collection Alias: $collection" | Tee-Object -file $log_batchEdit -Append
-#DEBUGGING
-#Write-Output "CONTENTdm User:    $User" | Tee-Object -file $log_batchEdit -Append
-#Write-Output "CONTENTdm Server:  $server" | Tee-Object -file $log_batchEdit -Append
-#Write-Output "CONTENTdm License: $license" | Tee-Object -file $log_batchEdit -Append
+Write-Debug "CONTENTdm User:    $User" | Tee-Object -file $log_batchEdit -Append
+Write-Debug "CONTENTdm Server:  $server" | Tee-Object -file $log_batchEdit -Append
+Write-Debug "CONTENTdm License: $license" | Tee-Object -file $log_batchEdit -Append
+#THis causes problems when this is run via batch ocr...
+#Write-Output ("Executed Command:   " + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "----------------------------------------------" | Tee-Object -file $log_batchEdit -Append
 
 # Read in the stored org settings to use if no server or license parameters were supplied.
+Write-Debug "Test for existing organizational settings; if they exist, import server and license values."
 if (Test-Path $cdmt_root\settings\org.csv) {
     $org = $(. Get-Org-Settings)
     if (!($server) -or ($null -eq $server)) {
@@ -78,6 +80,7 @@ if (Test-Path $cdmt_root\settings\org.csv) {
 }
 
 # Check for stored user password, if not available get user input.
+Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
 if (Test-Path $cdmt_root\settings\user.csv) {
     $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
     $usrcsv = Import-Csv $usrcsv
@@ -104,6 +107,7 @@ Else {
 }
 
 # Read in the metadata, add Level column to sort, lookup type, sort rows so Objects are first.
+Write-Debug "Import $csv and read the headers."
 Write-Output "Reading in the metadata and sorting the compound objects first." | Tee-Object -file $log_batchEdit -Append
 $metadata = Import-Csv -Path "$csv"
 $headers = ($metadata[0].psobject.Properties).Name
@@ -115,11 +119,12 @@ foreach ($header in $metadata[0].psobject.Properties) {
     }
 } #>
 
-# Try using ConvertFrom-CSV here to eliminate these tmp files.
+# Try using ConvertFrom-CSV here to eliminate these tmp files. Try add-member notepropertyname/value
+Write-Debug "Add a column to the metadata for object level."
 $metadata = $metadata | Select-Object *, @{Name = 'Level'; Expression = { '' } } | Export-CSV -Path "$cdmt_root\tmp1.csv" -NoTypeInformation
 $metadata = Import-Csv -Path "$cdmt_root\tmp1.csv"
 
-
+Write-Debug "Call the CONTENTdm API for each item to determine its type."
 foreach ($record in $metadata) {
     $dmrecord = $($record.dmrecord)
     $itemInfo = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetItemInfo/$collection/$dmrecord/json"
@@ -132,11 +137,16 @@ foreach ($record in $metadata) {
         $record.Level = "Item"
     }
 }
+
+Write-Debug "Group compound objects first in the metadata to feed to Catcher."
 $metadata | Sort-Object -Property Level -Descending | Export-CSV $cdmt_root\tmp2.csv -NoTypeInformation
 $metadata = Import-Csv -Path "$cdmt_root\tmp2.csv"
 
 # Build and send the SOAP XML to CONTENTdm Catcher
+Write-Debug "Establish the loop for building SOAP XML for each update."
 ForEach ($record in $metadata) {
+    $dmrecord = $record.dmrecord
+    Write-Debug "Building the SOAP for $dmrecord"
     $i++
     $SOAPRequest = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v6="http://catcherws.cdm.oclc.org/v6.0.0/">' + "`r`n"
     $SOAPRequest += "`t<soapenv:Header/>`r`n"
@@ -164,32 +174,23 @@ ForEach ($record in $metadata) {
     $SOAPRequest += "`t</soapenv:Body>`r`n"
     $SOAPRequest += "</soapenv:Envelope>"
 
-    $dmrecord = $record.dmrecord
+    Write-Debug $SOAPRequest
 
+    Write-Debug "Send the SOAP XML for $dmrecord"
     Write-Output "$(. Get-TimeStamp) SOAP XML created for dmrecord $dmrecord, sending it to Catcher..." | Tee-Object -Filepath $log_batchEdit -Append
-    Try {
-        . Send-SOAPRequest $SOAPRequest https://worldcat.org/webservices/contentdm/catcher?wsdl $editCount | Tee-Object -Filepath $log_batchEdit -Append
-        if ($?) { $editCount++ }
-        if ($Return -contains "Error") {
-            $editCount--
-        }
-        #else { $editCount-- }
-        # DEBUGGING: Comment out the Send-SOAPRequest above and remove the comment from the two lines below to log soap. WARNING PASSWORDS EXPOSED
-        #$soap = "$cdmt_root\logs\" + $collection + "_" + $record.dmrecord + ".xml"
-        #Write-Output $SOAPRequest | Out-File -FilePath $soap
-    }
-    Catch {
-        Write-Host "ERROR ERROR ERROR" -Fore "red" | Tee-Object -file $log_batchEdit -Append
-        Write-Output $Return | Tee-Object -Filepath $log_batchEdit -Append
-        if ($Return -contains "Error") {
-            $editCount--
-        }
-        Write-Output "---------------------" | Tee-Object -file $log_batchEdit -Append
-        Write-Host "  $(. Get-TimeStamp) Unknown error, dmrecord $dmrecord not updated." -Fore "red" | Tee-Object -file $log_batchEdit -Append
-        Write-Output "  $(. Get-TimeStamp) Unknown error, dmrecord $dmrecord not updated." | Out-File -Filepath $log_batchEdit -Append
-    }
-}
 
+    Try {
+        $editCount++
+        . Send-SOAPRequest -SOAPRequest $SOAPRequest -URL https://worldcat.org/webservices/contentdm/catcher?wsdl -editCount $editCount 2>&1 | Tee-Object -Filepath $log_batchEdit -Append
+    } Catch {
+        $editCount--
+        Write-Error "$(. Get-TimeStamp) Error occured, dmrecord $dmrecord not updated." 2>&1  | Tee-Object -Filepath $log_batchEdit -Append
+        Write-Error $_ 2>&1 | Tee-Object -Filepath $log_batchEdit -Append
+        #Write-Host "ERROR ERROR ERROR" -Fore "red" | Tee-Object -file $log_batchEdit -Append
+    }
+
+    Write-Output "---------------------" | Tee-Object -file $log_batchEdit -Append
+}
 # Cleanup the tmp files
 #Remove-Item "$cdmt_root\tmp*.csv" -Force -ErrorAction SilentlyContinue | Out-Null
 
@@ -197,9 +198,9 @@ Write-Output "----------------------------------------------" | Tee-Object -file
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Edit Complete." | Tee-Object -file $log_batchEdit -Append
 Write-Output "Collection Alias: $collection" | Tee-Object -file $log_batchEdit -Append
 Write-Output "Batch Log: $log_batchEdit" | Tee-Object -file $log_batchEdit -Append
-Write-Output "Records to be Edited:  $($metadata.count)" | Tee-Object -file $log_batchEdit -Append
-Write-Output "Records Attempted:     $i" | Tee-Object -file $log_batchEdit -Append
-Write-Output "Records Edited:        $editCount" | Tee-Object -file $log_batchEdit -Append
+Write-Output "Edits to Send:         $($metadata.count)" | Tee-Object -file $log_batchEdit -Append
+Write-Output "Edits Sent:            $i" | Tee-Object -file $log_batchEdit -Append
+Write-Output "Edits Initiated:       $editCount" | Tee-Object -file $log_batchEdit -Append
 Write-Output "---------------------------------------------" | Tee-Object -file $log_batchEdit -Append
 if (($($metadata.count) -ne $i) -or ($($metadata.count) -ne $editCount) -or ($i -ne $editCount)) {
     Write-Warning "Warning: Check the above report and log, there is a missmatch in the final numbers." | Tee-Object -file $log_batchEdit -Append
