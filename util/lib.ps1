@@ -777,11 +777,7 @@ function Get-Images-Using-API {
 
         [Parameter()]
         [int16]
-        $throttle,
-
-        [Parameter()]
-        [string]
-        $log
+        $throttle
     )
 
     Write-Verbose "$(. Get-TimeStamp) Get-Images-Using-API starting for $collection"
@@ -842,30 +838,34 @@ function Get-Images-Using-IIIF {
         [string]
         $path
     )
-    Write-Verbose "Get-Images-Using-IIIF starting for $collection"
-    Write-Verbose "Retrieve collection-level IIIF presentation manifest."
     $startTime = (Get-Date)
+    Write-Verbose "$(Get-TimeStamp) Get-Images-Using-IIIF starting for $collection"
+    Write-Verbose "$(Get-TimeStamp) Retrieve collection-level IIIF presentation manifest."
+    Write-Output "$(Get-TimeStamp) Reading IIIF presentation manifests for $collection and generating a list of images to download."
+    
     $collectionManifest = Invoke-Restmethod $public/iiif/info/$collection/manifest.json
     $objectManifests = $collectionManifest.manifests."@id" # CONTENTdm only generates IIIF manifests for images as of 2019-08-21.
     $uris = @()
     $images = @()
 
-    Write-Verbose "Build an array with dmrecord and uri for each object-level IIIF presentation manifest"
+    Write-Verbose "$(Get-TimeStamp) Build an array with dmrecord and uri for each object-level IIIF presentation manifest"
     foreach ($manifest in $objectManifests) {
         $record = Invoke-RestMethod $manifest
         $uri = ($record.sequences.canvases.images.resource."@id")
         $uris += $uri
     }
 
-    Write-Verbose "Traverse each object-level IIIF presentation manifest, find the images, and build an image downoad list object."
+    Write-Verbose "$(Get-TimeStamp) Traverse each object-level IIIF presentation manifest, find the images, and build an image downoad list object."
     foreach ($uri in $uris) {
         $pattern = [regex] "/(\d*)/"
         $id = $pattern.Matches($uri)[1] -replace '/'
         $file = ("$path\$collection" + "_" + $id + ".jpg")
         $image = @($id, $uri, $file)
-        #Write-Debug "$image"
+        Write-Verbose "$image"
         $images += , $image
     }
+
+    Write-Output "$(Get-TimeStamp) Downloading $($images.count) images for $collection using IIIF Image API from CONTENTdm. All downloads will be queued and script will wait until all downloads have completed before proceeding. Large images and large collections may take a long time to complete."
 
     $jobs = @()
     $total = $images.Count
@@ -876,20 +876,21 @@ function Get-Images-Using-IIIF {
         $jobs += Start-Job { Invoke-RestMethod -Uri $using:image[1] -OutFile $using:image[2] } -Name "$id-iiif"
         $jobName = $jobs[-1].Name
         Write-Information "@{Job Name=$jobName; CDM ID=$id; action=download}"
-        Write-Output "    [Job: $jobName] Download $id ($i of $total)"
-        Write-Verbose "Request: Invoke-RestMethod -Uri $($image[1]) -OutFile $($image[2])"
+        Write-Output "$(Get-TimeStamp)`t[Job: $jobName]`tDownload $id ($i of $total)"
+        Write-Verbose "$(Get-TimeStamp) Request: Invoke-RestMethod -Uri $($image[1]) -OutFile $($image[2])"
     }
     Do {
-        #$total = $images.Count
-        #$jpgs = (Get-ChildItem *.jpg -Path $path | Where-Object {$_.Length -gt 0kb}).Count
-        #Write-Progress -Activity "Get Images Using IIIF" -Status "Downloading images for $collection using IIIF Image API." -PercentComplete ($jpgs/$total)
-        $completed = (Get-Job -Name $collection* | Where-Object { $_.State -eq "Completed" }).count
-        Write-Progress -Activity "Get Images Using API" -Status "Downloading images for $collection..." -PercentComplete ($completed / $images.count * 100)
-        Write-Verbose "$completed/$($images.count) * 100 = $($completed/$images.count * 100)"
-    } Until ($jpgs -eq $total)
+        $running = @()
+        $completed = (Get-Job -Name "$collection*iiif" | Where-Object { $_.State -eq "Completed" }).count
+        $running += Get-Job -Name "$collection*iiif" | Where-Object { $_.State -eq "Running" } | ForEach-Object {$_.Name}
+        Write-Progress -Activity "Get Images Using IIIF" -Status "Downloading images for $collection..." -PercentComplete (($completed/$images.count) * 100)
+        Write-Debug "$(Get-TimeStamp) $completed/$($images.count) = $(($completed/$images.count)*100)"
+        Write-Verbose "$(Get-TimeStamp) Running Jobs: $running"
+        Start-Sleep 2
+    } Until ($completed -eq $images.count)
 
     $endTime = (Get-Date)
-    Write-Verbose "Get-Images-Using-IIIF complete for $collection (runtime of $(New-TimeSpan -Start $startTime -End $endTime))"
+    Write-Verbose "$(Get-TimeStamp) Get-Images-Using-IIIF complete for $collection (runtime of $(New-TimeSpan -Start $startTime -End $endTime))"
 }
 
 # Workflows require Powershell 5.1, i.e. Windows...
