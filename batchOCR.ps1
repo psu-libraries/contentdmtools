@@ -123,35 +123,33 @@ if (Test-Path $cdmt_root\settings\org.csv) {
     }
 } # error handling if no org settings? Or will user be prompted?
 
-Write-Output "$(. Get-TimeStamp) Generating a list of images for the collection..." | Tee-Object -FilePath $log_batchOCR -Append
-$nonImages = . Get-Images-List -server $server -collection $collection -path $path | Tee-Object -FilePath $log_batchOCR -Append
-Write-Verbose "nonImages is $nonImages"
-
-$total = ($(Import-Csv $path\items.csv) | Measure-Object).Count
-
+# Download the images to OCR
 switch ($method) {
-    API { 
+    API {
+        Write-Output "$(. Get-TimeStamp) Generating a list of images for the collection..." | Tee-Object -FilePath $log_batchOCR -Append
+        $nonImages = . Get-Images-List -server $server -collection $collection -path $path | Tee-Object -FilePath $log_batchOCR -Append
+        Write-Verbose "nonImages is $nonImages"
+        $items = Import-Csv -path $path\items.csv
+        $total = ( $items | Measure-Object).Count
         Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using the API. Images will be downloaded in parallel, without throttle for efficency. Batch OCR will pause until all downloads have completed. You can ignore any warning about suspended or disconnected jobs...") | Tee-Object -FilePath $log_batchOCR -Append
         . Get-Images-Using-API -path $path -server $server -collection $collection -public $public | Tee-Object -FilePath $log_batchOCR -Append
         if ($LastExitCode -eq 1) {
-            Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
+            Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion." | Tee-Object -FilePath $log_batchOCR -Append
             Return
         }
-        
     }
-    IIIF { 
+    IIIF {
         Write-Output "$(. Get-TimeStamp) Downloading images from CONTENTdm using IIIF..." | Tee-Object -FilePath $log_batchOCR -Append
         . Get-Images-Using-IIIF -public $public -collection $collection -path $path | Tee-Object -FilePath $log_batchOCR -Append
         if ($LastExitCode -eq 1) {
-            Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
+            Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion." | Tee-Object -FilePath $log_batchOCR -Append
             Return
         }
-            
     }
 }
 
 Write-Output "$(. Get-TimeStamp) Running Tesseract OCR on images. This really cranks up your CPU and you may occassionally see warning messages from Tesseract, e.g. box not within image. Usually nothing to worry about, just don't set your throttle past the maximum number of logical processors on this computer.`r`n
-$(. Get-TimeStamp) Sometimes Tesseract can take a long time on complex images. If it looks like I've hung up, give it more time and see if the batch completes. Large collections sometimes take longer without screen updates too. OCRing...`r`n" | Tee-Object -FilePath $log_batchOCR -Append
+$(. Get-TimeStamp) Sometimes Tesseract can take a long time on complex images. If it looks like Batch OCR is stuck, give it more time and see if the batch completes. Large collections sometimes take longer without screen updates too. OCRing...`r`n" | Tee-Object -FilePath $log_batchOCR -Append
 
 # does batching need to be added in for large record sets? (already comes paged...) Tesseract stays open in Task Manager for a while
 $return = . Update-OCR -path $path -throttle $throttle -collection $collection -field $field -gm $gm -tesseract $tesseract -method $method | Tee-Object -FilePath $log_batchOCR -Append
@@ -161,13 +159,12 @@ Write-Verbose "ocrCount is $ocrCount"
 Write-Verbose "nonText is $nonText"
 
 if (!(Test-Path $path\ocr.csv)) {
-    Write-Error "(. Get-TimeStamp) An error occured before the OCR metadata CSV for Batch Edit could be created. Exiting Batch OCR."
+    Write-Error "(. Get-TimeStamp) An error occured before the OCR metadata CSV for Batch Edit could be created. Exiting Batch OCR." | Tee-Object -FilePath $log_batchOCR -Append
     Return
 }
 
-$noText = (Import-Csv $path\ocr.csv | Where-Object { $_.$field -ne "" }).Count
+$noText = (Import-Csv $path\ocr.csv | Where-Object { $_.$field -eq "" }).Count
 Write-Verbose "noText is $noText"
-
 
 # Remove blank rows from the CSV (no text)
 Import-Csv $path\ocr.csv | Where-Object { $_.$field -ne "" } | Export-CSV $path\ocr_clean.csv -NoTypeInformation
@@ -195,7 +192,7 @@ $runtime = New-TimeSpan -Start $start -End $end
 
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Re-OCR Complete." | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Total Elapsed Time:`t$runtime"
+Write-Output "Total Elapsed Time:`t$runtime" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Collection Alias:`t$collection" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Batch Log:`t`t$log_batchOCR" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Images for Batch OCR:    $total" | Tee-Object -FilePath $log_batchOCR -Append

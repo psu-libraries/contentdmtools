@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file. The format 
   - Downloading images.
   - Converting images for OCR.
   - Running OCR.
+- IIIF download method for Batch OCR
 - PDFtk and xpdf utilities added.
   - Text can now be extracted from existing searchable PDFs if included in object folders rather than running OCR.
 - Verbose logging and help text added to scripts and functions. Progress indicators, where possible, for parallel actions.
