@@ -81,23 +81,22 @@ $path = $(Resolve-Path "$path")
 if (!(Test-Path $cdmt_root\logs)) { New-Item -ItemType Directory -Path $cdmt_root\logs | Out-Null }
 $log_batchOCR = ($cdmt_root + "\logs\batchOCR_" + $collection + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
 
-
 # Import library
 . $cdmt_root\util\lib.ps1
 
 $start = Get-Date
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch OCR Starting." | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Collection Alias:   $collection" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Transcript Field:   $field" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Public URL:         $public" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Server URL:         $server" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "License No.:        $license" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Staging Path:       $path" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "User:               $user" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Throttle:           $throttle" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Method:             $method" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output ("Executed Command:  " + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Collection Alias:`t$collection" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Transcript Field:`t$field" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Public URL:`t`t$public" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Server URL:`t`t$server" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "License No.:`t`t$license" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Staging Path:`t`t$path" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "User:`t`t`t$user" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Throttle:`t`t$throttle" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Method:`t`t`t$method" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output ("Executed Command:`t"+$MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
 
 try { Test-Path $path | Out-Null }
@@ -130,36 +129,32 @@ Write-Verbose "nonImages is $nonImages"
 
 $total = ($(Import-Csv $path\items.csv) | Measure-Object).Count
 
-if ($method -eq "API") {
-    Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using the API. Images will be downloaded in parallel, without throttle for efficency. Batch OCR will pause until all downloads have completed. You can ignore any warning about suspended or disconnected jobs...") | Tee-Object -FilePath $log_batchOCR -Append
-   . Get-Images-Using-API -path $path -server $server -collection $collection -public $public | Tee-Object -FilePath $log_batchOCR -Append
-    if ($LastExitCode -eq 1) {
-        Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
-        Return
+switch ($method) {
+    API { 
+        Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using the API. Images will be downloaded in parallel, without throttle for efficency. Batch OCR will pause until all downloads have completed. You can ignore any warning about suspended or disconnected jobs...") | Tee-Object -FilePath $log_batchOCR -Append
+        . Get-Images-Using-API -path $path -server $server -collection $collection -public $public | Tee-Object -FilePath $log_batchOCR -Append
+        if ($LastExitCode -eq 1) {
+            Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
+            Return
+        }
+        
     }
-    $jpgs = (Get-ChildItem *.jpg -Recurse -Path $path).Count
-while ($jpgs -ne $total) {
-    Write-Debug "jpgs = $jpgs; total = $total"
-    $jpgs = (Get-ChildItem *.jpg -Recurse -Path $path).Count
-    Start-Sleep 5
-}
-}
-elseif ($method -eq "IIIF") {
-    Write-Output ("$(. Get-TimeStamp) Downloading images from CONTENTdm using IIIF...") | Tee-Object -FilePath $log_batchOCR -Append
-    . Get-Images-Using-IIIF -public $public -collection $collection -path $path | Tee-Object -FilePath $log_batchOCR -Append
-    if ($LastExitCode -eq 1) {
-        Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
-        Return
+    IIIF { 
+        Write-Output "$(. Get-TimeStamp) Downloading images from CONTENTdm using IIIF..." | Tee-Object -FilePath $log_batchOCR -Append
+        . Get-Images-Using-IIIF -public $public -collection $collection -path $path | Tee-Object -FilePath $log_batchOCR -Append
+        if ($LastExitCode -eq 1) {
+            Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
+            Return
+        }
+            
     }
 }
-
-
 
 Write-Output "$(. Get-TimeStamp) Running Tesseract OCR on images. This really cranks up your CPU and you may occassionally see warning messages from Tesseract, e.g. box not within image. Usually nothing to worry about, just don't set your throttle past the maximum number of logical processors on this computer.`r`n
 $(. Get-TimeStamp) Sometimes Tesseract can take a long time on complex images. If it looks like I've hung up, give it more time and see if the batch completes. Large collections sometimes take longer without screen updates too. OCRing...`r`n" | Tee-Object -FilePath $log_batchOCR -Append
 
 # does batching need to be added in for large record sets? (already comes paged...) Tesseract stays open in Task Manager for a while
-$return = . Update-OCR -path $path -throttle $throttle -collection $collection -field $field -gm $gm -tesseract $tesseract | Tee-Object -FilePath $log_batchOCR -Append
+$return = . Update-OCR -path $path -throttle $throttle -collection $collection -field $field -gm $gm -tesseract $tesseract -method $method | Tee-Object -FilePath $log_batchOCR -Append
 $ocrCount = $return[0]
 $nonText = $return[1]
 Write-Verbose "ocrCount is $ocrCount"
@@ -186,7 +181,7 @@ $ScriptBlock = {
     $license = $args[3]
     $path = $args[4]
     $user = $args[5]
-    $csv = ($path+"\ocr_clean.csv")
+    $csv = ($path + "\ocr_clean.csv")
 
     . $cdmt_root\batchEdit.ps1 -collection $collection -server $server -license $license -csv $csv -user $user
 }
@@ -200,9 +195,9 @@ $runtime = New-TimeSpan -Start $start -End $end
 
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Re-OCR Complete." | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Total Elapsed Time: $runtime"
-Write-Output "Collection Alias: $collection" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Batch Log: $log_batchOCR" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Total Elapsed Time:`t$runtime"
+Write-Output "Collection Alias:`t$collection" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Batch Log:`t`t$log_batchOCR" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Images for Batch OCR:    $total" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "                        ------" | Tee-Object -FilePath $log_batchOCR -Append
 #Write-Output "Items without images:       $nonImages" | Tee-Object -FilePath $log_batchOCR -Append

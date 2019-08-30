@@ -773,7 +773,7 @@ function Get-Images-Using-API {
         [string]
         $public
     )
-    $startTime=$(Get-Date)
+    $startTime = $(Get-Date)
     Write-Verbose "$(Get-TimeStamp) Get-Images-Using-API starting for $collection."
     Write-Verbose "$(Get-TimeStamp) Import item CSV and call CONTENTdm API for additional information about the item."
 
@@ -786,6 +786,8 @@ function Get-Images-Using-API {
         $item | Add-Member -NotePropertyName uri -NotePropertyValue ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmrecord + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0")
         $item | Add-Member -NotePropertyName filename -NotePropertyValue ("$path\" + $collection + "_" + $item.dmrecord + ".jpg")
     }
+
+    $items | Export-Csv -Path $path\items.csv -NoTypeInformation
 
     Write-Verbose "$(Get-TimeStamp) Export item CSV with additional information for each item."
     $items | export-csv $path\items.csv -NoTypeInformation
@@ -838,6 +840,7 @@ function Get-Images-Using-IIIF {
     $objectManifests = $collectionManifest.manifests."@id" # CONTENTdm only generates IIIF manifests for images as of 2019-08-21.
     $uris = @()
     $images = @()
+    $items = @()
 
     Write-Verbose "$(Get-TimeStamp) Build an array with dmrecord and uri for each object-level IIIF presentation manifest"
     foreach ($manifest in $objectManifests) {
@@ -854,16 +857,23 @@ function Get-Images-Using-IIIF {
         $image = @($id, $uri, $file)
         Write-Verbose "$image"
         $images += , $image
+        $items += [PSCustomObject]@{
+            dmrecord = $id
+            id       = ($collection + "_" + $id)
+            uri      = $uri
+            filename = $file
+        } 
+        $items | export-csv -Path $path\images.csv -NoTypeInformation
     }
 
     Write-Output "$(Get-TimeStamp) Downloading $($images.count) images for $collection using IIIF Image API from CONTENTdm. All downloads will be queued and script will wait until all downloads have completed before proceeding. Large images and large collections may take a long time to complete."
 
     $jobs = @()
     $total = $images.Count
-    $i=0
+    $i = 0
     foreach ($image in $images) {
         $i++
-        $id = ($collection+"_"+$image[0])
+        $id = ($collection + "_" + $image[0])
         $jobs += Start-Job { Invoke-RestMethod -Uri $using:image[1] -OutFile $using:image[2] } -Name "$id-iiif"
         $jobName = $jobs[-1].Name
         Write-Information "@{Job Name=$jobName; CDM ID=$id; action=download}"
@@ -873,14 +883,15 @@ function Get-Images-Using-IIIF {
     Do {
         $running = @()
         $completed = (Get-Job -Name "$collection*iiif" | Where-Object { $_.State -eq "Completed" }).count
-        $running += Get-Job -Name "$collection*iiif" | Where-Object { $_.State -eq "Running" } | ForEach-Object {$_.Name}
-        Write-Progress -Activity "Get Images Using IIIF" -Status "Downloading images for $collection..." -PercentComplete (($completed/$images.count) * 100)
+        $running += Get-Job -Name "$collection*iiif" | Where-Object { $_.State -eq "Running" } | ForEach-Object { $_.Name }
+        Write-Progress -Activity "Get Images Using IIIF" -Status "Downloading images for $collection..." -PercentComplete (($completed / $images.count) * 100)
         Write-Debug "$(Get-TimeStamp) $completed/$($images.count) = $(($completed/$images.count)*100)"
         Write-Verbose "$(Get-TimeStamp) Running Jobs: $running"
         Start-Sleep 2
     } Until ($completed -eq $images.count)
 
     $endTime = (Get-Date)
+    Write-Output "$(Get-TimeStamp) Get-Images-Using-IIIF complete for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"
     Write-Verbose "$(Get-TimeStamp) Get-Images-Using-IIIF complete for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"
 }
 
@@ -1086,10 +1097,7 @@ Workflow Copy-TIF-ABBYY {
     Write-Verbose "Copy-TIF-ABBYY complete for $object"
 }
 
-
-
 Workflow Update-OCR {
-
     [cmdletbinding()]
     Param(
         [Parameter()]
@@ -1117,66 +1125,119 @@ Workflow Update-OCR {
         $tesseract,
 
         [Parameter()]
+        [string]
+        $method,
+
+        [Parameter()]
         $ocrCount,
 
         [Parameter()]
         $nonText
     )
     Write-Verbose "$(Get-Date -Format u) Update-OCR starting."
-    Write-Verbose "$(Get-Date -Format u) Import list of dmrecord numbers for items with images for the collection."
-
-    $items = Import-Csv $path\items.csv
-    $total = ($items | Measure-Object).Count
+    Write-Verbose "$(Get-Date -Format u) Import list of dmrecord numbers for items with images for the collection." 
     $csv = @()
     $ocrCount = 0
     $nonText = 0
-
     Write-Verbose "$(Get-Date -Format u) $total Images to process. Starting parallel loop with throttle set to $throttle."
 
+    switch -CaseSensitive ($method) {
+        API {
+            $items = Import-Csv -path $path\items.csv
+   
+        }
+        IIIF {
+            $items = Import-Csv -Path $path\images.csv
+        }
+    }
+    
     $i = 0
     $l = 0
     foreach -Parallel -Throttle $throttle ($item in $items) {
+        $total = ($items | Measure-Object).Count
         $id = $item.id
+        Write-Verbose "$item"
         $workflow:i++
         InlineScript {
-            Write-Progress -Activity "Update OCR" -Status "Processing $using:id" -PercentComplete ($using:l / $using:total * 100)
-            Write-Verbose "$(Get-Date -Format o) OCR starting for $using:id. ($using:i of $using:total)"
+            $id = $using:item.id
+            Write-Progress -Activity "Update OCR" -Status "Processing $id" -PercentComplete ($using:l / $using:total * 100)
+            Write-Verbose "$(Get-Date -Format u) OCR starting for $id. ($using:i of $using:total)"
             $imageFile = $using:item.filename
+            <#             switch ($method) {
+                API { 
+                    $imageFile = $using:item.filename
+                    Write-Verbose "imageFile jpg = $imageFile"
+                    Write-Verbose "method api = $method"
+                }
+                IIIF { 
+                    $imageFile = ($using:path + "\" + $using:collection + "_" + "$id.jpg") 
+                    Write-Verbose "imageFile jpg = $imageFile"
+                    Write-Verbose "method iiif = $method"
+                }
+            } #>
             if ((Test-Path "$imageFile") -and ((Get-Item $imageFile).Length -gt 0kb)) {
-                Write-Verbose "$(Get-Date -Format o) Converting $imageFile to grayscale TIF for OCR."
+                Write-Verbose "$(Get-Date -Format u) Converting $imageFile to grayscale TIF for OCR."
                 Invoke-Expression "$using:gm mogrify -format tif -colorspace gray $imageFile"
             }
-            $imageFile = ($using:path + "\" + $using:id + ".tif")
-            $imageBase = ($using:path + "\" + $using:id)
+            $imageFile = ($using:path + "\" + $id + ".tif")
+            $imageBase = ($using:path + "\" + $id)
+            <#             switch ($using:method) {
+                API { 
+                    $imageFile = ($using:path + "\" + $id + ".tif")
+                    Write-Verbose "imageFile tif = $imageFile"
+                    $imageBase = ($using:path + "\" + $id)
+                    Write-Verbose "imageFile tif = $imageBase"
+                    Write-Verbose "method api = $method"
+                }
+                IIIF { 
+                    $imageFile = ($using:path + "\" + $using:collection + "_" + "$id.tif")
+                    Write-Verbose "imageFile tif = $imageFile"
+                    $imageBase = ($using:path + "\" + $using:collection + "_" + $id)
+                    Write-Verbose "imageFile tif = $imageBase"
+                    Write-Verbose "method iiif = $method"
+                }
+            } #>
             if (Test-Path "$imageFile") {
-                Write-Verbose "$(Get-Date -Format o) Running OCR on $imageFile."
+                Write-Verbose "$(Get-Date -Format u) Running OCR on $imageFile."
                 Write-Verbose "Command: Invoke-Expression $using:tesseract $using:imageFile $using:imageBase txt quiet"
                 Invoke-Expression "$using:tesseract $using:imageFile $using:imageBase txt quiet"
             }
-            $imageTxt = ($using:path + "\" + $using:id + ".txt")
+            $imageTxt = ($using:path + "\" + $id + ".txt")
+            <#             switch ($using:method) {
+                API { 
+                    $imageTxt = ($using:path + "\" + $id + ".txt")
+                    Write-Verbose "imageFile txt = $imageTxt"
+                    Write-Verbose "method api = $method"
+                }
+                IIIF { 
+                    $imageTxt = ($using:path + "\" + $using:collection + "_" + "$id.txt")
+                    Write-Verbose "imageFile txt = $imageTxt"
+                    Write-Verbose "method iiif = $method"
+                }
+            } #>
             if (Test-Path "$imageTxt") {
-                Write-Progress -Activity "Update OCR" -Status "Processing $using:id" -PercentComplete ($using:l / $using:total * 100)
-                Write-Verbose "$(Get-Date -Format o) Optimizing the OCR for CONTENTdm indexing."
+                Write-Progress -Activity "Update OCR" -Status "Processing $ id" -PercentComplete ($using:l / $using:total * 100)
+                Write-Verbose "$(Get-Date -Format u) Optimizing the OCR for CONTENTdm indexing."
                 (Get-Content $imageTxt) | ForEach-Object {
                     $_ -replace '[^a-zA-Z0-9_.,!?$%#@/\s]' `
                         -replace '[\u009D]' `
                         -replace '[\u000C]'
                 } | Where-Object { $_.trim() -ne "" } | Set-Variable -Name ocrText
                 ($ocrText) -join "`n" | Set-Variable -Name ocrText
-                Write-Verbose "$(Get-Date -Format o) Creating an OCR update entry for $imageBase in metadata object to send to CONTENTdm Catcher."
+                Write-Verbose "$(Get-Date -Format u) Creating an OCR update entry for $imageBase in metadata object to send to CONTENTdm Catcher."
                 $csv += [PSCustomObject]@{
                     dmrecord     = $using:item.dmrecord
                     $using:field = $ocrText #$(Get-Content $imageTxt) -join "`n"
                 }
-                Write-Verbose "$(Get-Date -Format o) Export metadata CSV for use in Batch Edit."
+                Write-Verbose "$(Get-Date -Format u) Export metadata CSV for use in Batch Edit."
                 $csv | Export-CSV $using:path\ocr.csv -Append -NoTypeInformation -Force
             }
         }
         $workflow:l++
         if (Test-Path $($path + "\" + $id + ".txt")) { $ocrCount++ } else { $nonText++ }
-        Write-Verbose "$(Get-Date -Format o) OCR complete for $id."
+        Write-Verbose "$(Get-Date -Format u) OCR complete for $id."
         Write-Progress -Activity "Update OCR" -Status "Processing $id" -PercentComplete ($l / $total * 100)
     }
-    Write-Verbose "$(Get-Date -Format o) Update-OCR complete. $ocrCount images with text out of $i images processed."
+    Write-Verbose "$(Get-Date -Format u) Update-OCR complete. $ocrCount images with text out of $i images processed."
     return $ocrCount, $nonText
 }

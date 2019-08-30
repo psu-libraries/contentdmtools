@@ -108,8 +108,18 @@ $Batch = New-UDPage -Name "Batches" -Content {
             $scriptblock = "$cdmt_root\batchCreateCompoundObjects.ps1 -path $path -metadata $metadata -throttle $throttle -jp2 $jp2 -ocr $ocr -ocrengine $ocrengine -originals $originals"
             Start-Process PowerShell.exe -ArgumentList "-NoExit -WindowStyle Maximized -ExecutionPolicy ByPass -Command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Batch Create Compound Objects" -Text "Batch creation has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch.
-                `r`n------------------------------`r`nPath:`t`t$path`r`nMetadata:`t`t$metadata`r`nJP2s:`t`t$jp2`r`nOCR:`t`t$ocr`r`nOriginals:`t`t$originals`r`nThrottle:`t`t$throttle`r`n------------------------------`r`nBatch Start Time:`t`t$(Get-Date)"
+                New-UDCard -Title "Batch Create Compound Objects" -Text "Batch creation has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`n
+                You can also close the window at any time to halt the batch.`r`n
+                ------------------------------`r`n
+                Path:`t$path`r`n
+                Metadata:`t$metadata`r`n
+                Throttle:`t$throttle`r`n
+                JP2s:`t$jp2`r`n
+                OCR:`t$ocr`r`n
+                OCR Engine:`t$ocrengine`r`n
+                Originals:`t$originals`r`n
+                ------------------------------`r`n
+                Batch Start Time:`t$(Get-Date)"
             )
         }
 
@@ -124,8 +134,16 @@ $Batch = New-UDPage -Name "Batches" -Content {
             $scriptblock = "$cdmt_root\batchEdit.ps1 -collection $collection -server $server -license $license -csv $metadata  -user $user"
             Start-Process PowerShell.exe -ArgumentList "-NoExit -WindowStyle Maximized -ExecutionPolicy ByPass -Command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Batch Edit Metadata" -Text "Batch edit has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch.
-                `r`n------------------------------`r`nCollection:`t`t$collection`r`nServer:`t`t$server`r`nLicense:`t`t$license`r`nMetadata:`t`t$metadata`r`n`User:`t`t$user`r`n------------------------------`r`nBatch Start Time`t`t$(Get-Date)"
+                New-UDCard -Title "Batch Edit Metadata" -Text "Batch edit has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`n
+                You can also close the window at any time to halt the batch.`r`n
+                ------------------------------`r`n
+                Collection:`t$collection`r`n
+                Server:`t$server`r`n
+                License:`t$license`r`n
+                Metadata:`t$metadata`r`n`
+                User:`t$user`r`n
+                ------------------------------`r`n
+                Batch Start Time`t$(Get-Date)"
             )
         }
 
@@ -140,12 +158,24 @@ $Batch = New-UDPage -Name "Batches" -Content {
             New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
             New-UDInputField -Type 'select' -Name 'method' -Placeholder "Download Method" -Values @("API", "IIIF") -DefaultValue "API"
         } -Endpoint {
-            Param($collection, $field, $public, $server, $license, $path, $user, $throttle, $method, $verbose)
+            Param($collection, $field, $public, $server, $license, $path, $user, $throttle, $method)
             $scriptblock = "$cdmt_root\batchOCR.ps1 -collection $collection -field $field -public $public -server $server -license $license -path $path -user $user -throttle $throttle -method $method"
             Start-Process PowerShell.exe -ArgumentList "-NoExit -WindowStyle Maximized -ExecutionPolicy ByPass -Command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Batch OCR a Collection" -Text "Batch OCR has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch. `r`n------------------------------`r`nCollection:`t`t$collection`r`nField:`t`t$field`r`nPublic:`t`t$public`r`nServer:`t`t$server`r`nLicense:`t`t$license`r`nUser:`t`t$user`r`nPath:`t`t$path`r`nThrottle:`t`t$throttle`r`nMethod:`t`t$method`r`n------------------------------`r`nBatch Start Time:`t`t$(Get-Date)"
-
+                New-UDCard -Title "Batch OCR a Collection" -Text "Batch OCR has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`n
+                You can also close the window at any time to halt the batch. `n
+                ------------------------------`n
+                Collection:`t`t$collection`n
+                Field:`t`t$field`n
+                Public:`t`t$public`n
+                Server:`t`t$server`n
+                License:`t`t$license`n
+                Path:`t`t$path`n
+                User:`t`t$user`n
+                Throttle:`t`t$throttle`n
+                Method:`t`t$method`n
+                ------------------------------`r`n
+                Batch Start Time:`t`t$(Get-TimeStamp)"
             )
         }
     }
