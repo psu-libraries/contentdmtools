@@ -97,7 +97,7 @@ Write-Output "Staging Path:       $path" | Tee-Object -FilePath $log_batchOCR -A
 Write-Output "User:               $user" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Throttle:           $throttle" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Method:             $method" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output ("Executed Command:   " + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output ("Executed Command:  " + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
 
 try { Test-Path $path | Out-Null }
@@ -132,28 +132,28 @@ $total = ($(Import-Csv $path\items.csv) | Measure-Object).Count
 
 if ($method -eq "API") {
     Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using the API. Images will be downloaded in parallel, without throttle for efficency. Batch OCR will pause until all downloads have completed. You can ignore any warning about suspended or disconnected jobs...") | Tee-Object -FilePath $log_batchOCR -Append
-   . Get-Images-Using-API -path $path -server $server -collection $collection -public $public -throttle $throttle | Tee-Object -FilePath $log_batchOCR -Append
+   . Get-Images-Using-API -path $path -server $server -collection $collection -public $public | Tee-Object -FilePath $log_batchOCR -Append
     if ($LastExitCode -eq 1) {
         Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
         Return
     }
+    $jpgs = (Get-ChildItem *.jpg -Recurse -Path $path).Count
+while ($jpgs -ne $total) {
+    Write-Debug "jpgs = $jpgs; total = $total"
+    $jpgs = (Get-ChildItem *.jpg -Recurse -Path $path).Count
+    Start-Sleep 5
+}
 }
 elseif ($method -eq "IIIF") {
-    # Not working yet -- 2019-08-23
-    Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using IIIF...") | Tee-Object -FilePath $log_batchOCR -Append
-    . Get-Images-Using-IIIF -public $public -collection $collection -throttle $throttle -path $path | Tee-Object -FilePath $log_batchOCR -Append
+    Write-Output ("$(. Get-TimeStamp) Downloading images from CONTENTdm using IIIF...") | Tee-Object -FilePath $log_batchOCR -Append
+    . Get-Images-Using-IIIF -public $public -collection $collection -path $path | Tee-Object -FilePath $log_batchOCR -Append
     if ($LastExitCode -eq 1) {
         Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
         Return
     }
 }
 
-$jpgs = (Get-ChildItem *.jpg -Recurse -Path $path).Count
-while ($jpgs -ne $total) {
-    Write-Debug "jpgs = $jpgs; total = $total"
-    $jpgs = (Get-ChildItem *.jpg -Recurse -Path $path).Count
-    Start-Sleep 5
-}
+
 
 Write-Output "$(. Get-TimeStamp) Running Tesseract OCR on images. This really cranks up your CPU and you may occassionally see warning messages from Tesseract, e.g. box not within image. Usually nothing to worry about, just don't set your throttle past the maximum number of logical processors on this computer.`r`n
 $(. Get-TimeStamp) Sometimes Tesseract can take a long time on complex images. If it looks like I've hung up, give it more time and see if the batch completes. Large collections sometimes take longer without screen updates too. OCRing...`r`n" | Tee-Object -FilePath $log_batchOCR -Append

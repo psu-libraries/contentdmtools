@@ -745,8 +745,6 @@ function Get-Images-Using-API {
         The collection alias for a CONTENTdm collection.
         .PARAMETER public
         The URL for the Public UI for a CONTENTdm instance.
-        .PARAMETER throttle
-        Integer for the number of CPU processes when copying TIFs to the ABBYY server.
         .PARAMETER log
         The filepath or variable of a log to send console output.
         .EXAMPLE
@@ -773,15 +771,11 @@ function Get-Images-Using-API {
 
         [Parameter()]
         [string]
-        $public,
-
-        [Parameter()]
-        [int16]
-        $throttle
+        $public
     )
-
-    Write-Verbose "$(. Get-TimeStamp) Get-Images-Using-API starting for $collection"
-    Write-Verbose "Import item CSV and call CONTENTdm API for additional information about the item."
+    $startTime=$(Get-Date)
+    Write-Verbose "$(Get-TimeStamp) Get-Images-Using-API starting for $collection."
+    Write-Verbose "$(Get-TimeStamp) Import item CSV and call CONTENTdm API for additional information about the item."
 
     $items = Import-Csv $path\items.csv
     $total = ($items | Measure-Object).Count
@@ -793,12 +787,11 @@ function Get-Images-Using-API {
         $item | Add-Member -NotePropertyName filename -NotePropertyValue ("$path\" + $collection + "_" + $item.dmrecord + ".jpg")
     }
 
-    Write-Verbose "Export item CSV with additional information for each item."
+    Write-Verbose "$(Get-TimeStamp) Export item CSV with additional information for each item."
     $items | export-csv $path\items.csv -NoTypeInformation
-
     $i = 0
     $jobs = @()
-    Write-Verbose "For each item, download a JPG image using the CONTENTdm API."
+    Write-Verbose "$(Get-TimeStamp) For each item, download a JPG image using the CONTENTdm API."
     foreach ($item in $items) {
         $i++
         $uri = $($item.uri)
@@ -807,18 +800,16 @@ function Get-Images-Using-API {
         $jobs += Start-Job { Invoke-WebRequest $using:uri -Method Get -OutFile $using:file } -Name $id
         $jobName = $jobs[-1].Name
         Write-Information "@{Job Name=$jobName; CDM ID=$id; action=download}"
-        Write-Output "    [Job: $jobName] Download $id ($i of $total)"
-        Write-Verbose "Request: Invoke-WebRequest $uri -Method Get -OutFile $file"
+        Write-Output "$(Get-TimeStamp)`t[Job: $jobName]`tDownload $id ($i of $total)"
+        Write-Verbose "$(Get-TimeStamp) Request: Invoke-WebRequest $uri -Method Get -OutFile $file"
     }
     Do {
         $completed = (Get-Job -Name $collection* | Where-Object { $_.State -eq "Completed" }).count
-        Write-Progress -Activity "Get Images Using API" -Status "Downloading images..." -PercentComplete ($completed / $items.count * 100)
-        Write-Verbose "$completed/$($items.count) * 100 = $($completed/$items.count * 100)"
+        Write-Progress -Activity "Get Images Using API" -Status "Downloading images..." -PercentComplete (($completed / $items.count) * 100)
+        Write-Verbose "$(Get-TimeStamp) $completed/$($items.count) * 100 = $(($completed/$items.count) * 100)"
     } Until ($completed -eq $items.count)
-
-
-
-    Write-Verbose "$(. Get-TimeStamp) Get-Images-Using-API starting for $collection"
+    $endTime = $(Get-Date)
+    Write-Verbose "$(Get-TimeStamp) Get-Images-Using-API starting for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"
 }
 
 #IIIF for images. Test different size tifs for smaller and quicker files, eg /full/2000, /0/default.jpg
@@ -839,10 +830,10 @@ function Get-Images-Using-IIIF {
         $path
     )
     $startTime = (Get-Date)
-    Write-Verbose "$(Get-TimeStamp) Get-Images-Using-IIIF starting for $collection"
+    Write-Verbose "$(Get-TimeStamp) Get-Images-Using-IIIF starting for $collection."
     Write-Verbose "$(Get-TimeStamp) Retrieve collection-level IIIF presentation manifest."
     Write-Output "$(Get-TimeStamp) Reading IIIF presentation manifests for $collection and generating a list of images to download."
-    
+
     $collectionManifest = Invoke-Restmethod $public/iiif/info/$collection/manifest.json
     $objectManifests = $collectionManifest.manifests."@id" # CONTENTdm only generates IIIF manifests for images as of 2019-08-21.
     $uris = @()
@@ -890,7 +881,7 @@ function Get-Images-Using-IIIF {
     } Until ($completed -eq $images.count)
 
     $endTime = (Get-Date)
-    Write-Verbose "$(Get-TimeStamp) Get-Images-Using-IIIF complete for $collection (runtime of $(New-TimeSpan -Start $startTime -End $endTime))"
+    Write-Verbose "$(Get-TimeStamp) Get-Images-Using-IIIF complete for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"
 }
 
 # Workflows require Powershell 5.1, i.e. Windows...
