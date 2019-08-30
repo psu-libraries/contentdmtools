@@ -48,9 +48,10 @@ By combining parameters, you can create different types of batches based on your
        * `keep` to save the originals. DEFAULT.
        * `discard` to delete them.
        * `skip` to bypass any action regarding originals.
+     * `-verbose`  optional parameter to increase logging output.
      * Example: `batchCreateCompoundObjects.ps1 -ocr text -originals discard -path G:\pstsc_01822\2019-07\` will only create TXT transcripts (no PDF) and discard the original TIF images.
      * Example: `batchCreateCompoundObjects.ps1 -jp2 skip -ocr skip -originals skip -path G:\pstsc_01822\2019-07\` will only generate metadata files. This is useful if you have already processed batches but had last minute metadata changes. You can run this over an already processed batch and it will save over the existing metadata.
-   
+
 ### Adding batches to CONTENTdm
 1. Open CONTENTdm Project Client and open a project pre-configured for the collection to which you are uploading.
 2. From the Add menu, select Compound Objects, then choose the Directory Structure from the drop down and click Add.

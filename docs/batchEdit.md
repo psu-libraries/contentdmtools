@@ -4,7 +4,14 @@ The `batchEdit.ps1` script can be used to process `metadata.csv` into SOAP XML t
 ## Usage
 Run `.\batchEdit.ps1 -csv metadata.csv -collection collectionAlias -user CONTENTdmUserName` to kick off the script. You can pass any CSV with `-csv \path\to\metadata.csv`, but if `-csv` is left out, the script will assume a file named `metadata.csv` is in the same directory as the script.
 
-If you are using the dashboard, you can save your password in CONTENTdm Tools and it will automatically be passed through. Otherwise, you will see a command prompt asking for your CONTENTdm password. The `-server` and `-license` parameters are also automatically supplied if stored in the dashboard. You should pass them through with the command or will be prompted if necessary.
+### Parameters
+  - `-csv` -- Filepath and name for the metadata CSV of batch edits. If running command line, can releative. If using dashboard, always use full filepath. Always include filename.
+  - `-collection` -- Collection alias for the CONTENTdm collection you wish to batch edit. REQUIRED
+  - `-user` -- Username for a CONTENTdm user. REQUIRED
+    - If you are using the dashboard, you can save your password in CONTENTdm Tools and it will automatically be passed through. Otherwise, you will see a command prompt asking for your CONTENTdm password.
+  - `-server` -- URL to the Administrative UI. This may include a port number for self-hosted instances. (Defaults to stored settings is left out.)
+  - `-license` -- CONTENTdm License. (Defaults to stored settings is left out.)
+  - `-verbose` -- Optional parameter to increase logging output.
 
   * **Field names used as headers are not the same as the field name labels in CONTENTdm**. The dashboard provides a Collection Field Properties Lookup that will display the **field nicknames** for a collection. Also, yoou can look at the `CISONICK` value in the Field Properties in the Admin Gui for the correct field name to use as the CSV header.
   * **Controlled vocabularies and required fields (other than title) must be turned off before pitching metadata to catcher**. Make note of the settings and turn them back on after you are done with batch editing.

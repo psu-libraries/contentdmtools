@@ -60,11 +60,12 @@ $editCount = 0
 Write-Output "----------------------------------------------" | Tee-Object -file $log_batchEdit
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Edit Starting." | Tee-Object -file $log_batchEdit -Append
 Write-Output "Collection Alias: $collection" | Tee-Object -file $log_batchEdit -Append
-Write-Debug "CONTENTdm User:    $User" | Tee-Object -file $log_batchEdit -Append
-Write-Debug "CONTENTdm Server:  $server" | Tee-Object -file $log_batchEdit -Append
-Write-Debug "CONTENTdm License: $license" | Tee-Object -file $log_batchEdit -Append
+Write-Output "Server URL:       $server" | Tee-Object -file $log_batchEdit -Append
+Write-Output "License No.:      $license" | Tee-Object -file $log_batchEdit -Append
+Write-Output "Metadata CSV:     $csv" | Tee-Object -file $log_batchEdit -Append
+Write-Output "CONTENTdm User:   $user" | Tee-Object -file $log_batchEdit -Append
 #THis causes problems when this is run via batch ocr...
-#Write-Output ("Executed Command:   " + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output ("Executed Command:   " + $MyInvocation.Line) | Tee-Object -FilePath $log_batchEdit -Append
 Write-Output "----------------------------------------------" | Tee-Object -file $log_batchEdit -Append
 
 # Read in the stored org settings to use if no server or license parameters were supplied.
@@ -108,46 +109,42 @@ Else {
 
 # Read in the metadata, add Level column to sort, lookup type, sort rows so Objects are first.
 Write-Debug "Import $csv and read the headers."
-Write-Output "Reading in the metadata and sorting the compound objects first." | Tee-Object -file $log_batchEdit -Append
+Write-Output "$(. Get-TimeStamp) Reading in the metadata and grouping compound-objects first." | Tee-Object -file $log_batchEdit -Append
 $metadata = Import-Csv -Path "$csv"
 $headers = ($metadata[0].psobject.Properties).Name
-<# UNTESTED Lookup and convert field names to nicknames.
- $fields = Invoke-RestMethod $server/dmwebservices/index.php?q=dmGetCollectionFieldInfo/$collection/json
-foreach ($header in $metadata[0].psobject.Properties) {
-    if ($header -eq $fields.Name) {
-        $fields.nick = $header
-    }
-} #>
-
-# Try using ConvertFrom-CSV here to eliminate these tmp files. Try add-member notepropertyname/value
-Write-Debug "Add a column to the metadata for object level."
-$metadata = $metadata | Select-Object *, @{Name = 'Level'; Expression = { '' } } | Export-CSV -Path "$cdmt_root\tmp1.csv" -NoTypeInformation
-$metadata = Import-Csv -Path "$cdmt_root\tmp1.csv"
 
 Write-Debug "Call the CONTENTdm API for each item to determine its type."
 foreach ($record in $metadata) {
-    $dmrecord = $($record.dmrecord)
+    $dmrecord = $record.dmrecord
     $itemInfo = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetItemInfo/$collection/$dmrecord/json"
-    $itemFile = $($itemInfo.find)
+    $itemFile = $itemInfo.find
     $itemType = $itemFile.Substring($itemFile.Length - 3, 3)
     if ($itemType -eq "cpd") {
-        $record.Level = "Object"
+        #$record.Level = "Object"
+        $record | Add-Member -NotePropertyName Level -NotePropertyValue "Object"
     }
     elseif ($itemType -ne "cpd") {
-        $record.Level = "Item"
+        #$record.Level = "Item"
+        $record | Add-Member -NotePropertyName Level -NotePropertyValue "Item"
     }
 }
 
-Write-Debug "Group compound objects first in the metadata to feed to Catcher."
-$metadata | Sort-Object -Property Level -Descending | Export-CSV $cdmt_root\tmp2.csv -NoTypeInformation
-$metadata = Import-Csv -Path "$cdmt_root\tmp2.csv"
+$metadata2 = New-TemporaryFile
+$metadata | Export-Csv $metadata2 -NoTypeInformation
 
-# Build and send the SOAP XML to CONTENTdm Catcher
+Write-Debug "Group compound objects first in the metadata to feed to Catcher."
+$metadata3 = New-TemporaryFile
+$metadata = Import-Csv -Path $metadata2
+$metadata | Sort-Object -Property Level -Descending | Export-Csv $metadata3 -NoTypeInformation
+$metadata = Import-Csv -Path $metadata3
+
+Write-Output "$(. Get-TimeStamp) Processing each metadata update for CONTENTdm Catcher." | Tee-Object -file $log_batchEdit -Append
 Write-Debug "Establish the loop for building SOAP XML for each update."
 ForEach ($record in $metadata) {
     $dmrecord = $record.dmrecord
     Write-Debug "Building the SOAP for $dmrecord"
     $i++
+    Write-Progress -Activity "Sending Batch Edits to CONTENTdm Catcher" -Status "Sending $dmrecord" -PercentComplete ($i/$metadata.count * 100)
     $SOAPRequest = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v6="http://catcherws.cdm.oclc.org/v6.0.0/">' + "`r`n"
     $SOAPRequest += "`t<soapenv:Header/>`r`n"
     $SOAPRequest += "`t<soapenv:Body>`r`n"
@@ -180,8 +177,8 @@ ForEach ($record in $metadata) {
     Write-Output "$(. Get-TimeStamp) SOAP XML created for dmrecord $dmrecord, sending it to Catcher..." | Tee-Object -Filepath $log_batchEdit -Append
 
     Try {
-        $editCount++
         . Send-SOAPRequest -SOAPRequest $SOAPRequest -URL https://worldcat.org/webservices/contentdm/catcher?wsdl -editCount $editCount 2>&1 | Tee-Object -Filepath $log_batchEdit -Append
+        $editCount++
     } Catch {
         $editCount--
         Write-Error "$(. Get-TimeStamp) Error occured, dmrecord $dmrecord not updated." 2>&1  | Tee-Object -Filepath $log_batchEdit -Append
@@ -191,19 +188,24 @@ ForEach ($record in $metadata) {
 
     Write-Output "---------------------" | Tee-Object -file $log_batchEdit -Append
 }
+
 # Cleanup the tmp files
-#Remove-Item "$cdmt_root\tmp*.csv" -Force -ErrorAction SilentlyContinue | Out-Null
+Remove-Item $metadata2 -Force
+Remove-Item $metadata3 -Force
 
 Write-Output "----------------------------------------------" | Tee-Object -file $log_batchEdit -Append
 Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Edit Complete." | Tee-Object -file $log_batchEdit -Append
 Write-Output "Collection Alias: $collection" | Tee-Object -file $log_batchEdit -Append
 Write-Output "Batch Log: $log_batchEdit" | Tee-Object -file $log_batchEdit -Append
-Write-Output "Edits to Send:         $($metadata.count)" | Tee-Object -file $log_batchEdit -Append
+Write-Output "Edits for Batch Edit:  $($metadata.count)" | Tee-Object -file $log_batchEdit -Append
+Write-Output "                     -----"
 Write-Output "Edits Sent:            $i" | Tee-Object -file $log_batchEdit -Append
+Write-Output "Errors:                ($($metadata.count - $editCount))"
+Write-Output "                     -----"
 Write-Output "Edits Initiated:       $editCount" | Tee-Object -file $log_batchEdit -Append
 Write-Output "---------------------------------------------" | Tee-Object -file $log_batchEdit -Append
 if (($($metadata.count) -ne $i) -or ($($metadata.count) -ne $editCount) -or ($i -ne $editCount)) {
     Write-Warning "Warning: Check the above report and log, there is a missmatch in the final numbers." | Tee-Object -file $log_batchEdit -Append
     Write-Output "Warning: Check the above report and log, there is a missmatch in the final numbers." >> $log_batchEdit
 }
-Write-Host -ForegroundColor Green "Unless it is being used within batchOCR, this window can be closed at anytime. Don't forget to index the collection!"
+Write-Host -ForegroundColor Green "Unless it is being used within Batch OCR, this window can be closed at anytime. Don't forget to index the collection!"

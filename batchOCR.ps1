@@ -81,6 +81,7 @@ $path = $(Resolve-Path "$path")
 if (!(Test-Path $cdmt_root\logs)) { New-Item -ItemType Directory -Path $cdmt_root\logs | Out-Null }
 $log_batchOCR = ($cdmt_root + "\logs\batchOCR_" + $collection + "_log_" + $(Get-Date -Format yyyy-MM-ddTHH-mm-ss-ffff) + ".txt")
 
+
 # Import library
 . $cdmt_root\util\lib.ps1
 
@@ -130,8 +131,8 @@ Write-Verbose "nonImages is $nonImages"
 $total = ($(Import-Csv $path\items.csv) | Measure-Object).Count
 
 if ($method -eq "API") {
-    Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using the API...") | Tee-Object -FilePath $log_batchOCR -Append
-   . Get-Images-Using-API-2 -path $path -server $server -collection $collection -public $public -throttle $throttle -log $log_batchOCR | Tee-Object -FilePath $log_batchOCR -Append
+    Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using the API. Images will be downloaded in parallel, without throttle for efficency. Batch OCR will pause until all downloads have completed. You can ignore any warning about suspended or disconnected jobs...") | Tee-Object -FilePath $log_batchOCR -Append
+   . Get-Images-Using-API -path $path -server $server -collection $collection -public $public -throttle $throttle | Tee-Object -FilePath $log_batchOCR -Append
     if ($LastExitCode -eq 1) {
         Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion."
         Return
@@ -147,7 +148,17 @@ elseif ($method -eq "IIIF") {
     }
 }
 
-Write-Output "$(. Get-TimeStamp) Running Tesseract OCR on images..." | Tee-Object -FilePath $log_batchOCR -Append
+$jpgs = (Get-ChildItem *.jpg -Recurse -Path $path).Count
+while ($jpgs -ne $total) {
+    Write-Debug "jpgs = $jpgs; total = $total"
+    $jpgs = (Get-ChildItem *.jpg -Recurse -Path $path).Count
+    Start-Sleep 5
+}
+
+Write-Output "$(. Get-TimeStamp) Running Tesseract OCR on images. This really cranks up your CPU and you may occassionally see warning messages from Tesseract, e.g. box not within image. Usually nothing to worry about, just don't set your throttle past the maximum number of logical processors on this computer.`r`n
+$(. Get-TimeStamp) Sometimes Tesseract can take a long time on complex images. If it looks like I've hung up, give it more time and see if the batch completes. Large collections sometimes take longer without screen updates too. OCRing...`r`n" | Tee-Object -FilePath $log_batchOCR -Append
+
+# does batching need to be added in for large record sets? (already comes paged...) Tesseract stays open in Task Manager for a while
 $return = . Update-OCR -path $path -throttle $throttle -collection $collection -field $field -gm $gm -tesseract $tesseract | Tee-Object -FilePath $log_batchOCR -Append
 $ocrCount = $return[0]
 $nonText = $return[1]
@@ -159,13 +170,15 @@ if (!(Test-Path $path\ocr.csv)) {
     Return
 }
 
+$noText = (Import-Csv $path\ocr.csv | Where-Object { $_.$field -ne "" }).Count
+Write-Verbose "noText is $noText"
+
+
 # Remove blank rows from the CSV (no text)
 Import-Csv $path\ocr.csv | Where-Object { $_.$field -ne "" } | Export-CSV $path\ocr_clean.csv -NoTypeInformation
-
-#$csv | Select-Object -Property dmrecord, "$field" | Where-Object { $_.$field -ne "" } | Export-CSV $path\ocr.csv -NoTypeInformation
+$csvRows = (Import-CSV $path\ocr_clean.csv).count
 
 Write-Output "$(. Get-TimeStamp) Running Batch Edit to send updated OCR text to CONTENTdm..." | Tee-Object -FilePath $log_batchOCR -Append
-$csvRows = (Import-CSV $path\ocr_clean.csv).count
 $ScriptBlock = {
     $cdmt_root = $args[0]
     $collection = $args[1]
@@ -180,7 +193,7 @@ $ScriptBlock = {
 Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $cdmt_root, $collection, $server, $license, $path, $user 2>&1 | Tee-Object -FilePath $log_batchOCR -Append
 
 # Cleanup the tmp files
-#Remove-Item $path -Recurse -Force | Tee-Object -FilePath $log_batchOCR -Append
+Remove-Item $path -Recurse -Force | Tee-Object -FilePath $log_batchOCR -Append
 
 $end = Get-Date
 $runtime = New-TimeSpan -Start $start -End $end
@@ -190,10 +203,12 @@ Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Re-OCR Complete." | Tee-O
 Write-Output "Total Elapsed Time: $runtime"
 Write-Output "Collection Alias: $collection" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Batch Log: $log_batchOCR" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Items with images:     $total" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Items without images:  $nonImages" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Images for OCR:        $csvRows" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Images processed:      $ocrCount" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output "Images without text:   $nonText" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Images for Batch OCR:    $total" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "                        ------" | Tee-Object -FilePath $log_batchOCR -Append
+#Write-Output "Items without images:       $nonImages" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Images with text:        $ocrCount" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Images without text:     $($nonText + $noText)" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "                        ------" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "Updates for Batch Edit:  $csvRows" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "---------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Host -ForegroundColor Green "Read the Batch Edit report to see if any OCR updates were successfully sent to CONTENTdm. Don't forget to index the collection to save any edits. This window can be closed at anytime."
+Write-Host -ForegroundColor Green "Read the Batch Edit report above to see if OCR updates were successfully sent to CONTENTdm. Don't forget to index the collection to save any initiated edits. This window can be closed at anytime."

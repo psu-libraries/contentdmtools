@@ -25,6 +25,7 @@ A temporary subdirectory will be created in your CONTENTdm Tools directory where
      * `-public` -- URL to the Public UI CONTENTdm website. (Defaults to stored settings is left out.)
      * `-server` -- URL to the Administrative UI. This may include a port number for self-hosted instances. (Defaults to stored settings is left out.)
      * `-license` -- CONTENTdm License. (Defaults to stored settings is left out.)
+     * `-verbose` -- Optional parameter to increase logging output.
 3. Depending on the size of the collection, this could take a long time to run. You can watch the terminal output as it progresses or review the log afterwards. It will end with a (very) brief report on the results.
 4. Log into the Administrative UI and index the collection to complete the process. Approving is not necessary for items uploaded through CONTENTdm Catcher.
 5. After indexing, be sure to return field properties back to their original setting, if needed.

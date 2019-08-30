@@ -7,16 +7,20 @@ $pdftk = "$PSScriptRoot\pdftk\bin\pdftk.exe"
 $pdf2text = "$PSScriptRoot\xpdf\pdftotext.exe"
 
 function Get-TimeStamp {
-    return (Get-Date -Format o)
+    return (Get-Date -Format u)
 }
 function Get-Org-Settings {
+    Write-Verbose "Get-Org-Settings checking for stored settings."
     $Return = @{ }
     if (Test-Path settings\org.csv) {
         $orgcsv = $(Resolve-Path settings\org.csv)
         $orgcsv = Import-Csv settings\org.csv
         foreach ($org in $orgcsv) {
+            Write-Verbose ("Public URL: " + $org.public)
             $Return.public = $org.public
+            Write-Verbose ("Server URL: " + $org.server)
             $Return.server = $org.server
+            Write-Verbose ("License: " + $org.license)
             $Return.license = $org.license
             $Global:cdmt_public = $org.public
             $Global:cdmt_server = $org.server
@@ -64,7 +68,8 @@ function Send-SOAPRequest {
         $editCount--
         Write-Output "Catcher's Response:"
         Write-Error $ReturnXml.Envelope.InnerText
-    } else {
+    }
+    else {
         Write-Output "Catcher's Response:"
     }
 
@@ -117,16 +122,20 @@ function Split-Object-Metadata {
         [string]
         $metadata = "metadata.csv"
     )
+    Write-Verbose "$(. Get-TimeStamp) Split-Object-Metadata starting"
     # Trim spaces from the headers
+    Write-Verbose "Trim spaces from headers in metadata.csv"
     $SourceHeadersDirty = Get-Content -Path $path\$metadata -First 2 | ConvertFrom-Csv
     $SourceHeadersCleaned = $SourceHeadersDirty.PSObject.Properties.Name.Trim()
 
-    # Add the File Name field at the end if it wasn't included in the original metadata
+    <#     # Add the File Name field at the end if it wasn't included in the original metadata
+    Write-Verbose "Add column for File Name, if necessary."
     if ("File Name" -notin $SourceHeadersCleaned) {
         $tmpcsv = Import-CSV -Path $path\$metadata | Select-Object *, "File Name" | ConvertFrom-Csv
-    }
+    } #>
 
     # Import the metadata csv using the appropriate headers
+    Write-verbose "Import metadata using trimmed headers"
     if ($null -ne $tmpCSV) {
         $SourceHeadersDirty = Get-Content -Path $tmpCSV -First 2 | ConvertFrom-Csv
         $SourceHeadersCleaned = $SourceHeadersDirty.PSObject.Properties.Name.Trim()
@@ -137,6 +146,7 @@ function Split-Object-Metadata {
     }
 
     # Trim all the fields
+    Write-Verbose "Trim all the metadata fields."
     $csv | Foreach-Object {
         foreach ($property in $_.PSObject.Properties) {
             $property.value = $property.value.trim()
@@ -146,11 +156,13 @@ function Split-Object-Metadata {
     # Export tab-d compound object metadata files, with object-level metadata.
     # Strip Directory and Level columns if present.
     # If File Name was included in the original metadata, make sure it's the last field.
+    Write-Verbose "Export tab-d compound-object metadata file, with object-level metadata. Strip out processing information (Directory, Level) and make sure File Name is the last column."
     $objects = $csv | Group-Object -AsHashTable -AsString -Property Directory
     ForEach ($object in $objects.keys) {
         if (!(Test-Path $path\$object)) { New-Item -ItemType Directory -Path $path\$object | Out-Null }
         $objects.$object | Select-Object * -ExcludeProperty "File Name" | Select-Object *, "File Name" -ExcludeProperty Directory, Level | Export-Csv -Delimiter "`t" -Path $path\$object\$object.txt -NoTypeInformation
     }
+    Write-Verbose "$(. Get-TimeStamp) Split-Object-Metadata complete"
 }
 
 function Convert-Item-Metadata {
@@ -180,8 +192,13 @@ function Convert-Item-Metadata {
         [string]
         $object
     )
+    Write-Verbose "$(. Get-TimeStamp) Convert-Item-Metadata starting for $object"
+    Write-Verbose "For every JP2 in the object directory, append derived item-level metadata to the tab-d compound-object metadata file."
     $f = 1
     $jp2s = (Get-ChildItem -Path $path\$object *.jp2 -Recurse).count
+
+    if ($jp2s -eq 0) { Write-Warning "No JP2 files. Item metadata is derived from JP2 files, cannot be derived." }
+
     Get-ChildItem -Path $path\$object *.jp2 -Recurse | ForEach-Object {
         $objcsv = Import-Csv -Delimiter "`t" -Path $path\$object\$object.txt
         $row = @()
@@ -192,29 +209,7 @@ function Convert-Item-Metadata {
         Write-Output $item | Out-File $path\$object\$object.txt -Append -Encoding UTF8
         $f++
     }
-}
-
-function Convert-Item-Metadata-2 {
-    #NOT WORKING
-    [cmdletbinding()]
-    Param(
-        [Parameter()]
-        [string]
-        $path,
-
-        [Parameter()]
-        [string]
-        $object
-    )
-    $f = 1
-    $jp2s = (Get-ChildItem -Path $path\$object *.jp2 -Recurse).count
-    Get-ChildItem -Path $path\$object *.jp2 -Recurse | ForEach-Object {
-        $object_csv = Import-Csv -Delimiter "`t" -Path "$path\$object\$object.txt"
-        $item = @{ Title = "Item $f of $jp2s" ; "File Name" = "$_.Name" }
-        $object_csv += $item ## $object_csv isn't really a defined object, can't add to it like this.
-        $object_csv | Export-Csv "$path\$object\$object.txt" -Delimiter "`t" -NoTypeInformation -Append
-        $f++
-    }
+    Write-Verbose "$(. Get-TimeStamp) Convert-Item-Metadata complete for $object"
 }
 
 function Optimize-OCR {
@@ -238,12 +233,14 @@ function Optimize-OCR {
         [string]
         $ocrText
     )
+    Write-Verbose "$(. Get-TimeStamp) Optimize-OCR starting"
     (Get-Content $ocrText) | ForEach-Object {
         $_ -replace '[^a-zA-Z0-9_.,!?$%#@/\s]' `
             -replace '[\u009D]' `
             -replace '[\u000C]'
     } | Where-Object { $_.trim() -ne "" } | Set-Content $ocrText
     Return $ocrText
+    Write-Verbose "$(. Get-TimeStamp) Optimize-OCR complete"
 }
 
 function Get-Text-From-PDF {
@@ -277,31 +274,47 @@ function Get-Text-From-PDF {
 
         [Parameter()]
         [string]
-        $log
+        $log,
+
+        [Parameter()]
+        [string]
+        $pdftk,
+
+        [Parameter()]
+        [string]
+        $pdf2text
     )
+    Write-Verbose "$(. Get-TimeStamp) Get-Text-From-PDF starting for $object"
     # split object PDFs and move complete PDF to tmp directory
     if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
+    Write-Verbose "Split the object PDF into item PDFs using pdftk"
     Invoke-Expression "$pdftk $path\$object\$object.pdf burst output $path\$object\$object-%02d.pdf" -ErrorAction SilentlyContinue | Tee-Object -file $log -Append
     Remove-Item $path\$object\doc_data.txt | Tee-Object -file $log -Append
     if (!(Test-Path $path\$object\tmp)) { New-Item -ItemType Directory -Path $path\$object\tmp | Out-Null }
+    Write-Verbose "Move the object PDF to a tmp directory"
     Move-Item $path\$object\$object.pdf -Destination $path\$object\tmp | Tee-Object -file $log -Append
 
     # Move PDFs to transcripts directory because we won't be able to distinguish metadata from text otherwise
+    Write-Verbose "Move the item PDFs to the transcripts subdirectory"
     if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
     Get-ChildItem -Path $path\$object *.pdf | ForEach-Object { Move-Item $path\$object\$_ -Destination $path\$object\transcripts | Tee-Object -file $log -Append }
 
     # Extract text and delete item PDF
+    Write-Verbose "Extract the text from each item PDF with xpdf and delete the item PDFs."
     Get-ChildItem -Path $path\$object\transcripts *.pdf | ForEach-Object {
         Invoke-Expression "$pdf2text -raw -nopgbrk $path\$object\transcripts\$_" -ErrorAction SilentlyContinue | Tee-Object -file $log -Append
         Remove-Item $path\$object\transcripts\$_ | Tee-Object -file $log -Append
     }
 
     # Optimize TXT and rename to match JP2
+    Write-Verbose "Rename TXT transcripts to match corresponding JP2 file."
     $jp2Files = @(Get-ChildItem *.jp2 -Path $path\$object\scans -Name | Sort-Object)
     $txtFiles = @(Get-ChildItem *.txt -Path $path\$object\transcripts -Name | Sort-Object)
+
+    Write-Verbose "Optimize the OCR for CONTENTdm indexing."
     $i = 0
     Get-ChildItem *.txt -Path $path\$object\transcripts -Name | Sort-Object | ForEach-Object {
-        . Optimize-OCR -ocrText $path\$object\transcripts\$_ 2>&1 | Tee-Object -file $log -Append
+        . Optimize-OCR -ocrText $path\$object\transcripts\$_ 2>&1 | Out-Null # Tee-Object -file $log -Append
         $name = $jp2Files[$i]
         $name = $name.Substring(0, $name.Length - 4)
         $name = "$name.txt"
@@ -313,8 +326,10 @@ function Get-Text-From-PDF {
     }
 
     # Move the complete PDF back in to the object directory and delete the tmp directory.
+    Write-Verbose "Move the object PDF back into the object directory and delete the temp directory."
     Move-Item $path\$object\tmp\$object.pdf -Destination $path\$object | Tee-Object -file $log -Append
     Remove-Item -Recurse $path\$object\tmp | Tee-Object -file $log -Append
+    Write-Verbose "$(. Get-TimeStamp) Get-Text-From-PDF complete for $object"
 }
 
 function Merge-PDF {
@@ -354,16 +369,25 @@ function Merge-PDF {
 
         [Parameter()]
         [string]
-        $log
+        $log,
+
+        [Parameter()]
+        [string]
+        $gs
     )
+    Write-Verbose "$(. Get-TimeStamp) Merge-PDF starting for $object"
+    Write-Verbose "Generate a list of PDF files from the pdfs subdirectory to merge"
     $list = (Get-ChildItem -Path $path\$object\$pdfs *.pdf).FullName
     $list > "$path\$object\list.txt"
     $list = "$path\$object\list.txt"
     $outfile = "'$path\$object\$object.pdf'"
+    Write-Verbose "Merge PDFs using GhostScript, creating 200 PPI pdf in the object directory"
     Invoke-Expression "$gs -sDEVICE=pdfwrite -dQUIET -dBATCH -dSAFER -dNOPAUSE -dFastWebView -dCompatibilityLevel='1.5' -dDownsampleColorImages='true' -dColorImageDownsampleType=/Bicubic -dColorImageResolution='200' -dDownsampleGrayImages='true' -dGrayImageDownsampleType=/Bicubic -dGrayImageResolution='200' -dDownsampleMonoImages='true' -sOUTPUTFILE=$outfile $(get-content "$list")" -ErrorAction SilentlyContinue  *>> $null
+    Write-Verbose "Delete the list and individual PDFs"
     $files = $(get-content "$list")
     ForEach ($file in $files) { Remove-Item $file 2>&1 | Tee-Object -file $log -Append }
     Remove-Item $list 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "$(. Get-TimeStamp) Merge-PDF complete for $object"
 }
 
 function Merge-PDF-PDFTK {
@@ -386,10 +410,13 @@ function Merge-PDF-PDFTK {
         [string]
         $pdftk
     )
-
+    Write-Verbose "$(. Get-TimeStamp) Merge-PDF-PDFTK starting for $object"
     # $pdftk *.pdf cat output file.pdf
+    Write-Verbose "Generate a list of PDF files from the transcripts subdirectory and merge them using pdftk."
     $list = (Get-ChildItem -Path $path\$object\transcripts *.pdf).FullName
     Invoke-Expression "$pdftk $list cat output $path\$object.pdf" | Tee-Object -file $log -Append
+    # need to delete the individual pages...
+    Write-Verbose "$(. Get-TimeStamp) Merge-PDF-PDFTK complete for $object"
 }
 function Get-Images-List {
     <#
@@ -436,25 +463,30 @@ function Get-Images-List {
         [string]
         $log
     )
+    Write-Verbose "$(. Get-TimeStamp) Get-Images-List starting for $collection"
+    Write-Verbose "Make call to CONTENTdm API for collection records."
     $hits = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmQuery/$collection/0/dmrecord!find/nosort/1024/1/0/0/0/0/1/0/json"
     # Need to deal with pager/pagination of results, maxes at 1024?
     $records = $hits.records
+
     $items = @()
     $nonImages = 0
+
+    Write-Verbose "For each record, derive image or nonimage."
     foreach ($record in $records) {
-        if ($null -eq $record.find) {
-            $nonImages++
-        }
-        elseif ($record.filetype -eq "cpd") {
+        if ($record.filetype -eq "cpd") {
             $pointer = $record.pointer
-            $objects = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCompoundObjectInfo/$collection/$pointer/json"
-            foreach ($object in $objects) {
+            $pages = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCompoundObjectInfo/$collection/$pointer/json"
+            foreach ($object in $pages) {
+                # Need to use an extenernal call to a self-recursive function that finds all the pages within any nodes. Have a placeholder started with Get-Object-Pages.
                 if ($object.type -eq "Monograph") {
                     #this seems like it could miss pages at other node levels? Do i need to add lots of ifs here or something to traverse?
                     $pages = $object.node.node.page
                     foreach ($page in $pages) {
                         $items += [PSCustomObject]@{
                             dmrecord = $page.pageptr
+                            type     = "Item"
+                            # media = $record.filetype
                         }
                     }
                 }
@@ -463,23 +495,56 @@ function Get-Images-List {
                     foreach ($page in $pages) {
                         $items += [PSCustomObject]@{
                             dmrecord = $page.pageptr
+                            type     = "Item"
+                            # media = $record.filetype
                         }
                     }
                 }
             }
         }
-        elseif (($record.filetype -eq "jp2") -or ($record.filetype -eq "jpg")) {
+        elseif (($record.filetype -eq "jp2")) {
             $items += [PSCustomObject]@{
                 dmrecord = $record.pointer
+                type     = "Item"
+                media    = $record.filetype
             }
         }
         else {
             $nonImages++
+            <#             $items += [PSCustomObject]@{
+                dmrecord = $record.pointer
+                type = "unknown"
+                media = $record.filetype
+            } #>
         }
     }
     $items | Export-Csv $path\items.csv -NoTypeInformation
     return $nonImages
+    Write-Verbose "$(. Get-TimeStamp) Get-Images-List complete for $collection"
 }
+
+function Get-Object-Pages {
+    # INCOMPLETE
+    Param(
+        [Parameter()]
+        [string]
+        $server,
+
+        [Parameter()]
+        [string]
+        $collection,
+
+        [Parameter()]
+        [string]
+        $dmrecord
+    )
+    $pointer = $dmrecord
+    $pages = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCompoundObjectInfo/$collection/$pointer/json"
+    foreach ($node in $pages.node) {
+
+    }
+}
+
 
 function Convert-to-Text-And-PDF-ABBYY {
     <#
@@ -518,9 +583,13 @@ function Convert-to-Text-And-PDF-ABBYY {
 
         [Parameter()]
         [string]
-        $log
-    )
+        $log,
 
+        [Parameter()]
+        [string]
+        $pdftk
+    )
+    Write-Verbose "$(. Get-TimeStamp) Convert-to-Text-And-PDF-ABBYY starting for $object"
     $abbyy_staging = O:\pcd\cho-cdm\staging
     $abbyy_both_in = O:\pcd\cho-cdm\input
     $abbyy_both_out = O:\pcd\cho-cdm\output
@@ -528,14 +597,19 @@ function Convert-to-Text-And-PDF-ABBYY {
     $txts = (Get-ChildItem *.txt -Path $abbyy_text_out\$object -Recurse).count
     New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null
     . Copy-Tif -path $path -object $object -throttle $throttle -abbyy_staging $abbyy_staging -log $log 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "Move copy of object TIFs from ABBYY staging to ABBYY in directory."
     Move-Item $abbyy_staging\$object $abbyy_both_in 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "Sleep script until there is in TXT for every TIF"
     while ($tifs -ne $txts) { Start-Sleep -Seconds 15 }
     Get-ChildItem * -Path $abbyy_both_out\$object | ForEach-Object {
         Move-Item -Path $_ -Destination $path\$object\transcripts  2>&1 | Tee-Object -file $log -Append
     }
-    . Merge-PDF-PDFTK -path $path -object $object -log $log 2>&1 | Tee-Object -file $log -Append
+    . Merge-PDF-PDFTK -path $path -object $object -log $log -pdftk $pdftk 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "Move object PDF from transcripts subdirectory to object directory."
     Move-Item $path\$object\transcripts\$object.pdf $path\$object\$object.pdf 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "Delete the object directory in ABBYY out directory."
     Remove-Item $abbyy_both_out\$object 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "$(. Get-TimeStamp) Convert-to-Text-And-PDF-ABBYY complete for $object"
 }
 
 function Convert-to-Text-ABBYY {
@@ -578,7 +652,7 @@ function Convert-to-Text-ABBYY {
         [string]
         $log
     )
-
+    Write-Verbose "$(. Get-TimeStamp) Convert-to-Text-ABBYY starting for $object"
     $abbyy_staging = O:\pcd\text\staging
     $abbyy_text_in = O:\pcd\text\input
     $abbyy_text_out = O:\pcd\text\output
@@ -586,12 +660,16 @@ function Convert-to-Text-ABBYY {
     $txts = (Get-ChildItem *.txt -Path $abbyy_text_out\$object -Recurse).count
     New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null
     . Copy-TIF-ABBYY -path $path -object $object -throttle $throttle -abbyy_staging $abbyy_staging -log $log 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "Move copy of object TIFs from ABBYY staging to ABBYY in directory."
     Move-Item -Path $abbyy_staging\$object -Destination $abbyy_text_in 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "Sleep script until there is in TXT for every TIF"
     while ($tifs -ne $txts) { Start-Sleep -Seconds 15 }
     Get-ChildItem *.txt -Path $abbyy_text_out\$object | ForEach-Object {
         Move-Item -Path $_ -Destination $path\$object\transcripts  2>&1 | Tee-Object -file $log -Append
     }
+    Write-Verbose "Delete the object directory in ABBYY out directory."
     Remove-Item $abbyy_text_out\$object 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "$(. Get-TimeStamp) Convert-to-Text-ABBYY complete for $object"
 }
 
 function Convert-to-PDF-ABBYY {
@@ -634,24 +712,26 @@ function Convert-to-PDF-ABBYY {
         [string]
         $log
     )
-
+    Write-Verbose "$(. Get-TimeStamp) Convert-to-PDF-ABBYY starting for $object"
     $abbyy_staging = O:\pcd\many2pdf-high\staging
     $abbyy_pdf_in = O:\pcd\many2pdf-high\input
     $abbyy_pdf_out = O:\pcd\many2pdf-high\output
     $pdf = ($abbyy_pdf_out + "\" + $object + ".pdf")
     $txt = ($abbyy_pdf_out + "\" + $object + ".txt")
-
     New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null
     . Copy-TIF-ABBYY -path $path -object $object -throttle $throttle -abbyy_staging $abbyy_staging -log $log 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "Move copy of object TIFs from ABBYY staging to ABBYY in directory."
     Move-Item $abbyy_staging\$object $abbyy_pdf_in 2>&1 | Tee-Object -file $log -Append
     while (!(Test-Path $pdf)) {
         Start-Sleep 10
     }
+    Write-Verbose "Move object PDF from ABBYY in directory to object directory and cleanup ABBYY in."
     Move-Item $pdf $path\$object 2>&1 | Tee-Object -file $log -Append
     Remove-Item $txt 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "$(. Get-TimeStamp) Convert-to-PDF-ABBYY complete for $object"
 }
 
-function Get-Images-Using-API-2 {
+function Get-Images-Using-API {
     <#
 	    .SYNOPSIS
 	    Parallel download JPG images from a CONTENTdm collection using the API.
@@ -703,42 +783,113 @@ function Get-Images-Using-API-2 {
         [string]
         $log
     )
+
+    Write-Verbose "$(. Get-TimeStamp) Get-Images-Using-API starting for $collection"
+    Write-Verbose "Import item CSV and call CONTENTdm API for additional information about the item."
+
     $items = Import-Csv $path\items.csv
     $total = ($items | Measure-Object).Count
+
     foreach ($item in $items) {
         $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $collection + "/" + $item.dmrecord + "/json")
         $item | Add-Member -NotePropertyName id -NotePropertyValue ($collection + "_" + $item.dmrecord)
         $item | Add-Member -NotePropertyName uri -NotePropertyValue ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmrecord + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0")
         $item | Add-Member -NotePropertyName filename -NotePropertyValue ("$path\" + $collection + "_" + $item.dmrecord + ".jpg")
-        <# $list += [PSCustomObject]@{
-            id   = ($collection + "_" + $item.dmrecord)
-            url  = ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmrecord + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0")
-            file = ("$path\" + $collection + "_" + $item.dmrecord + ".jpg")
-        } #>
     }
 
+    Write-Verbose "Export item CSV with additional information for each item."
     $items | export-csv $path\items.csv -NoTypeInformation
 
     $i = 0
     $jobs = @()
+    Write-Verbose "For each item, download a JPG image using the CONTENTdm API."
     foreach ($item in $items) {
-        $running = @(Get-Job | Where-Object { $_.State -eq 'Running' })
-        if ($running.Count -le $($throttle - 1)) {
-            $i++
-            $uri = $($item.uri)
-            $file = $($item.filename)
-            $jobs += Start-Job { Invoke-WebRequest $using:uri -Method Get -OutFile $using:file }
-            $jobId = $jobs[-1].Id
-            $id = $($item.id)
-            Write-Information "@{Job ID=$jobId; CDM ID=$id; action=download}"
-            Write-Output "    [Job Id: $jobId] Downloading $id ($i of $total)"
-            Write-Debug "    Request: Invoke-WebRequest $uri -Method Get -OutFile $file"
-        }
-        else {
-            $running | Wait-Job | Out-Null
-        }
-        Get-Job | Receive-Job
+        $i++
+        $uri = $($item.uri)
+        $file = $item.filename
+        $id = $item.id
+        $jobs += Start-Job { Invoke-WebRequest $using:uri -Method Get -OutFile $using:file } -Name $id
+        $jobName = $jobs[-1].Name
+        Write-Information "@{Job Name=$jobName; CDM ID=$id; action=download}"
+        Write-Output "    [Job: $jobName] Download $id ($i of $total)"
+        Write-Verbose "Request: Invoke-WebRequest $uri -Method Get -OutFile $file"
     }
+    Do {
+        $completed = (Get-Job -Name $collection* | Where-Object { $_.State -eq "Completed" }).count
+        Write-Progress -Activity "Get Images Using API" -Status "Downloading images..." -PercentComplete ($completed / $items.count * 100)
+        Write-Verbose "$completed/$($items.count) * 100 = $($completed/$items.count * 100)"
+    } Until ($completed -eq $items.count)
+
+
+
+    Write-Verbose "$(. Get-TimeStamp) Get-Images-Using-API starting for $collection"
+}
+
+#IIIF for images. Test different size tifs for smaller and quicker files, eg /full/2000, /0/default.jpg
+# Not working as of 2019-08-23, still working on getting URI and ID paired together for downloading...
+function Get-Images-Using-IIIF {
+    [cmdletbinding()]
+    Param(
+        [Parameter()]
+        [string]
+        $public,
+
+        [Parameter()]
+        [string]
+        $collection,
+
+        [Parameter()]
+        [string]
+        $path
+    )
+    Write-Verbose "Get-Images-Using-IIIF starting for $collection"
+    Write-Verbose "Retrieve collection-level IIIF presentation manifest."
+    $startTime = (Get-Date)
+    $collectionManifest = Invoke-Restmethod $public/iiif/info/$collection/manifest.json
+    $objectManifests = $collectionManifest.manifests."@id" # CONTENTdm only generates IIIF manifests for images as of 2019-08-21.
+    $uris = @()
+    $images = @()
+
+    Write-Verbose "Build an array with dmrecord and uri for each object-level IIIF presentation manifest"
+    foreach ($manifest in $objectManifests) {
+        $record = Invoke-RestMethod $manifest
+        $uri = ($record.sequences.canvases.images.resource."@id")
+        $uris += $uri
+    }
+
+    Write-Verbose "Traverse each object-level IIIF presentation manifest, find the images, and build an image downoad list object."
+    foreach ($uri in $uris) {
+        $pattern = [regex] "/(\d*)/"
+        $id = $pattern.Matches($uri)[1] -replace '/'
+        $file = ("$path\$collection" + "_" + $id + ".jpg")
+        $image = @($id, $uri, $file)
+        #Write-Debug "$image"
+        $images += , $image
+    }
+
+    $jobs = @()
+    $total = $images.Count
+    $i=0
+    foreach ($image in $images) {
+        $i++
+        $id = ($collection+"_"+$image[0])
+        $jobs += Start-Job { Invoke-RestMethod -Uri $using:image[1] -OutFile $using:image[2] } -Name "$id-iiif"
+        $jobName = $jobs[-1].Name
+        Write-Information "@{Job Name=$jobName; CDM ID=$id; action=download}"
+        Write-Output "    [Job: $jobName] Download $id ($i of $total)"
+        Write-Verbose "Request: Invoke-RestMethod -Uri $($image[1]) -OutFile $($image[2])"
+    }
+    Do {
+        #$total = $images.Count
+        #$jpgs = (Get-ChildItem *.jpg -Path $path | Where-Object {$_.Length -gt 0kb}).Count
+        #Write-Progress -Activity "Get Images Using IIIF" -Status "Downloading images for $collection using IIIF Image API." -PercentComplete ($jpgs/$total)
+        $completed = (Get-Job -Name $collection* | Where-Object { $_.State -eq "Completed" }).count
+        Write-Progress -Activity "Get Images Using API" -Status "Downloading images for $collection..." -PercentComplete ($completed / $images.count * 100)
+        Write-Verbose "$completed/$($images.count) * 100 = $($completed/$images.count * 100)"
+    } Until ($jpgs -eq $total)
+
+    $endTime = (Get-Date)
+    Write-Verbose "Get-Images-Using-IIIF complete for $collection (runtime of $(New-TimeSpan -Start $startTime -End $endTime))"
 }
 
 # Workflows require Powershell 5.1, i.e. Windows...
@@ -770,17 +921,25 @@ Workflow Convert-to-JP2 {
         [string]
         $adobe
     )
-
-    $files = Get-ChildItem -Path $path\$object *.tif* -Recurse
+    Write-Verbose "Convert-to-JP2 starting for $object"
+    $files = Get-ChildItem *.tif* -Path $path\$object -Recurse
+    $total = (Get-ChildItem *.tif* -Path $path\$object -Recurse).Count
+    $i = 0
     foreach -Parallel -Throttle $throttle ($file in $files) {
+        $workflow:i++
+        Write-Progress -Activity "Batch Create Compound objects" -Status "Converting $file to JP2" -PercentComplete ($i / $total * 100)
         $basefilename = $file.Basename
         $fullfilename = $file.Fullname
         $sourceICC = "$path\$object\source_$basefilename.icc"
-        Invoke-Expression "$gm convert $fullfilename $sourceICC" -ErrorAction SilentlyContinue
-        Invoke-Expression "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $path\$object\scans\$basefilename.jp2" -ErrorAction SilentlyContinue
+        Write-Verbose "Extracting color profile for $basefilename using GraphicsMagick"
+        Invoke-Expression "$gm convert $fullfilename $sourceICC" 2>&1 | Tee-Object -file $log -Append
+        Write-Verbose "Converting $basefilename to JP2 using souce color profile"
+        Write-Debug "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $path\$object\scans\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
+        Invoke-Expression "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $path\$object\scans\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
+        Write-Verbose "Delete source color profile"
         Remove-Item $sourceICC
     }
-
+    Write-Verbose "Convert-to-JP2 complete for $object"
 }
 
 Workflow Convert-to-Text-And-PDF {
@@ -810,15 +969,14 @@ Workflow Convert-to-Text-And-PDF {
         [string]
         $tesseract
     )
-
+    Write-Verbose "Convert-to-Text-And-PDF starting for $object"
     $files = Get-ChildItem -Path $path\$object *.tif* -Recurse
     foreach -Parallel -Throttle $throttle ($file in $files) {
         $basefilename = $file.BaseName
-        Invoke-Expression "$tesseract $path\$object\$file $path\$object\transcripts\$basefilename txt pdf quiet" -ErrorAction SilentlyContinue
-        Get-ChildItem -Path $path\$object\transcripts *.txt -Recurse | ForEach-Object {
-            . Optimize-OCR -ocrText $_.FullName  2>&1 | Tee-Object -file $log -Append
-        }
+        Write-Verbose "Run Tesseract on $basefilename to generate TXT and PDF"
+        Invoke-Expression "$tesseract $path\$object\$file $path\$object\transcripts\$basefilename txt pdf quiet" 2>&1 | Tee-Object -FilePath $log -Append
     }
+    Write-Verbose "Convert-to-Text-And-PDF complete for $object"
 }
 
 Workflow Convert-to-Text {
@@ -848,20 +1006,22 @@ Workflow Convert-to-Text {
         [string]
         $tesseract
     )
+    Write-Verbose "Convert-to-Text starting for $object"
     $files = Get-ChildItem -Path $path\$object *.tif* -Recurse
     foreach -Parallel -Throttle $throttle ($file in $files) {
         $basefilename = $file.BaseName
         $fullfilename = $file.FullName
         $tmp = ($basefilename + "_ocr.tif")
         $fulltmp = "$path\$object\$tmp"
+        Write-Verbose "Copy TIFs to a temporary directory"
         Copy-Item -Path $fullfilename -Destination $path\$object\$tmp
-        Invoke-Expression "$gm mogrify -format tif -colorspace gray $fulltmp" -ErrorAction SilentlyContinue 2>&1 | Tee-Object -FilePath $log -Append
-        Invoke-Expression "$tesseract $path\$object\$tmp $path\$object\transcripts\$basefilename txt quiet" -ErrorAction SilentlyContinue
-        Get-ChildItem -Path $path\$object\transcripts *.txt -Recurse | ForEach-Object {
-            . Optimize-OCR -ocrText $_.FullName  2>&1 | Tee-Object -file $log -Append
-        }
-        Remove-Item $path\$object\$tmp
+        Write-Verbose "Convert TIF to grayscale TIF for OCR using GraphicsMagick"
+        Invoke-Expression "$gm mogrify -format tif -colorspace gray $fulltmp" 2>&1 | Tee-Object -FilePath $log -Append
+        Write-Verbose "Convert grayscale TIF to TXT using Tesseract"
+        Invoke-Expression "$tesseract $path\$object\$tmp $path\$object\transcripts\$basefilename txt quiet" 2>&1 | Tee-Object -FilePath $log -Append
+        Remove-Item "$path\$object\$tmp"
     }
+    Write-Verbose "Convert-to-Text complete for $object"
 }
 
 Workflow Convert-to-PDF {
@@ -891,11 +1051,14 @@ Workflow Convert-to-PDF {
         [string]
         $tesseract
     )
+    Write-Verbose "Convert-to-PDF starting for $object"
     $files = Get-ChildItem -Path $path\$object *.tif* -Recurse
     foreach -Parallel -Throttle $throttle ($file in $files) {
         $basefilename = $file.BaseName
+        Write-Verbose "Convert TIFs to PDF using Tesseract"
         Invoke-Expression "$tesseract $path\$object\$file $path\$object\transcripts\$basefilename pdf quiet" -ErrorAction SilentlyContinue
     }
+    Write-Verbose "Convert-to-PDF complete for $object"
 }
 
 
@@ -922,97 +1085,16 @@ Workflow Copy-TIF-ABBYY {
         [string]
         $abbyy_staging
     )
-
+    Write-Verbose "Copy-TIF-ABBYY starting for $object"
     $files = Get-ChildItem *.tif* -Path $path\$object -Recurse
+    Write-Verbose "Parallel copy TIFs to ABBYY staging."
     foreach -Parallel -Throttle $throttle ($file in $files) {
         Copy-Item -Path $file.FullName -Destination $abbyy_staging\$object  2>&1 | Tee-Object -file $log -Append
     }
+    Write-Verbose "Copy-TIF-ABBYY complete for $object"
 }
 
-Workflow Get-Images-Using-API {
-    [cmdletbinding()]
-    Param(
-        [Parameter()]
-        [string]
-        $path,
 
-        [Parameter()]
-        [string]
-        $server,
-
-        [Parameter()]
-        [string]
-        $collection,
-
-        [Parameter()]
-        [string]
-        $public,
-
-        [Parameter()]
-        [int16]
-        $throttle
-    )
-    $list = @()
-    $items = import-csv "$path\items_clean.csv" -Header dmrecord, file
-    $total = ($items | Measure-Object).Count
-    foreach ($item in $items) {
-        $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $collection + "/" + $item.dmrecord + "/json")
-        $url = ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmrecord + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0")
-        $id = ($collection + "_" + $item.dmrecord)
-        $file = ("$path\" + $id + ".jpg")
-        $list += [PSCustomObject]@{
-            url  = $url
-            file = $file
-            id   = $id
-        }
-    }
-    $i = 0
-    foreach -Parallel -Throttle $throttle ($row in $list) {
-        $WORKFLOW:i++
-        Invoke-WebRequest $row.url -Method Get -OutFile $row.file
-        Write-Output ("    Downloading " + $row.id + ", $i of $total")
-    }
-}
-
-#IIIF for images. Test different size tifs for smaller and quicker files, eg /full/2000, /0/default.jpg
-# Not working as of 2019-08-23, still working on getting URI and ID paired together for downloading...
-Workflow Get-Images-Using-IIIF {
-    [cmdletbinding()]
-    Param(
-        [Parameter()]
-        [string]
-        $public,
-
-        [Parameter()]
-        [string]
-        $collection,
-
-        [Parameter()]
-        [int16]
-        $throttle,
-
-        [Parameter()]
-        [string]
-        $path
-    )
-    $collectionManifest = Invoke-Restmethod $public/iiif/info/$collection/manifest.json
-    $objectManifests = $collectionManifest.manifests."@id" # CONTENTdm only generates IIIF manifests for images as of 2019-08-21.
-    $uris = @()
-    foreach ($manifest in $objectManifests) {
-        $record = Invoke-RestMethod $manifest
-        $uri = ($record.sequences.canvases.images.resource."@id")
-        $uris += $uri
-    }
-    foreach -Parallel -Throttle $throttle ($uri in $uris) {
-        $id = $uri | Select-String "\/(\d*)\/full"
-        Write-Output $id
-        $file = "$path\$collection\$id.jpg"
-        Write-Output $file
-        #Write-Output $uri #$file
-        #Invoke-RestMethod -Uri $uri -OutFile $file
-    }
-
-}
 
 Workflow Update-OCR {
 
@@ -1048,8 +1130,8 @@ Workflow Update-OCR {
         [Parameter()]
         $nonText
     )
-    Write-Verbose "$(Get-Date -Format o) Update-OCR starting."
-    Write-Verbose "$(Get-Date -Format o) Import list of dmrecord numbers for items with images for the collection."
+    Write-Verbose "$(Get-Date -Format u) Update-OCR starting."
+    Write-Verbose "$(Get-Date -Format u) Import list of dmrecord numbers for items with images for the collection."
 
     $items = Import-Csv $path\items.csv
     $total = ($items | Measure-Object).Count
@@ -1057,13 +1139,15 @@ Workflow Update-OCR {
     $ocrCount = 0
     $nonText = 0
 
-    Write-Verbose "$(Get-Date -Format o) $total Images to process. Starting parallel loop with throttle set to $throttle."
+    Write-Verbose "$(Get-Date -Format u) $total Images to process. Starting parallel loop with throttle set to $throttle."
 
     $i = 0
+    $l = 0
     foreach -Parallel -Throttle $throttle ($item in $items) {
         $id = $item.id
         $workflow:i++
         InlineScript {
+            Write-Progress -Activity "Update OCR" -Status "Processing $using:id" -PercentComplete ($using:l / $using:total * 100)
             Write-Verbose "$(Get-Date -Format o) OCR starting for $using:id. ($using:i of $using:total)"
             $imageFile = $using:item.filename
             if ((Test-Path "$imageFile") -and ((Get-Item $imageFile).Length -gt 0kb)) {
@@ -1074,10 +1158,12 @@ Workflow Update-OCR {
             $imageBase = ($using:path + "\" + $using:id)
             if (Test-Path "$imageFile") {
                 Write-Verbose "$(Get-Date -Format o) Running OCR on $imageFile."
-                Invoke-Expression "$using:tesseract $imageFile $imageBase txt quiet"
+                Write-Verbose "Command: Invoke-Expression $using:tesseract $using:imageFile $using:imageBase txt quiet"
+                Invoke-Expression "$using:tesseract $using:imageFile $using:imageBase txt quiet"
             }
             $imageTxt = ($using:path + "\" + $using:id + ".txt")
             if (Test-Path "$imageTxt") {
+                Write-Progress -Activity "Update OCR" -Status "Processing $using:id" -PercentComplete ($using:l / $using:total * 100)
                 Write-Verbose "$(Get-Date -Format o) Optimizing the OCR for CONTENTdm indexing."
                 (Get-Content $imageTxt) | ForEach-Object {
                     $_ -replace '[^a-zA-Z0-9_.,!?$%#@/\s]' `
@@ -1094,9 +1180,11 @@ Workflow Update-OCR {
                 $csv | Export-CSV $using:path\ocr.csv -Append -NoTypeInformation -Force
             }
         }
-        if (Test-Path $($path+"\"+$id+".txt")) {$ocrCount++} else {$nonText++}
-        Write-Verbose "$(Get-Date -Format o) OCR complete for $id. ($i of $total)"
+        $workflow:l++
+        if (Test-Path $($path + "\" + $id + ".txt")) { $ocrCount++ } else { $nonText++ }
+        Write-Verbose "$(Get-Date -Format o) OCR complete for $id."
+        Write-Progress -Activity "Update OCR" -Status "Processing $id" -PercentComplete ($l / $total * 100)
     }
     Write-Verbose "$(Get-Date -Format o) Update-OCR complete. $ocrCount images with text out of $i images processed."
-    return $ocrCount,$nonText
+    return $ocrCount, $nonText
 }

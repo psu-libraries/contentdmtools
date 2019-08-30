@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file. The format 
   - Running OCR.
 - PDFtk and xpdf utilities added.
   - Text can now be extracted from existing searchable PDFs if included in object folders rather than running OCR.
+- Verbose logging and help text added to scripts and functions. Progress indicators, where possible, for parallel actions.
 ### Changed
 - Organizational settings and user credentials are now saved in a CSV and managed through dashboard GUI with CLI fallback. Passwords are stored as secure strings.
 - OCR text now preserves line breaks, but removes duplicate line breaks.
@@ -21,6 +22,8 @@ All notable changes to this project will be documented in this file. The format 
 - Updated documentation.
 - Moved logic for various activities into external functions for reuse.
 - Metadata processing will now automatically add `File Name` field if not included and make sure it's the last column if it's included.
+- Improved error handling and QC reporting.
+- Batches from the dashboard now start in PowerShell window using `-ExecutionPolicy Bypass`.
 ### Removed
 
 ## [1.0.0](https://github.com/psu-libraries/contentdmtools/releases/tag/v1.0) - 2019-08-06
