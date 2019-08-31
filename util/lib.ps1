@@ -197,7 +197,7 @@ function Convert-Item-Metadata {
     $f = 1
     $jp2s = (Get-ChildItem -Path $path\$object *.jp2 -Recurse).count
 
-    if ($jp2s -eq 0) { Write-Warning "No JP2 files. Item metadata is derived from JP2 files, cannot be derived." }
+    if ($jp2s -eq 0) { Write-Warning "No JP2 files present. Item metadata cannot be derived or appended to $("$object.txt")." }
 
     Get-ChildItem -Path $path\$object *.jp2 -Recurse | ForEach-Object {
         $objcsv = Import-Csv -Delimiter "`t" -Path $path\$object\$object.txt
@@ -473,7 +473,10 @@ function Get-Images-List {
     $nonImages = 0
 
     Write-Verbose "For each record, derive image or nonimage."
+    $r=0
     foreach ($record in $records) {
+        $r++
+        Write-Progress -Activity "Get-Images-List" -Status "Finding images in $collection" -CurrentOperation "Record $r of $($records.count)" -PercentComplete (($r/$records.count)*100)
         if ($record.filetype -eq "cpd") {
             $pointer = $record.pointer
             $pages = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCompoundObjectInfo/$collection/$pointer/json"
@@ -518,6 +521,20 @@ function Get-Images-List {
             } #>
         }
     }
+
+    # Retrieve additional image properties for downloading
+    Write-Verbose "$(Get-Date -Format u) Use CONTENTdm API to retrieve additional image properties needed for downloading."
+    $m = 0
+    foreach ($item in $items) {
+        $m++
+        Write-Progress -Activity "Get-Images-List" -Status "Retrieve additional image information for dmrecord $($item.dmrecord) ($m of $($items.Count))" -PercentComplete (($m/$items.count) * 100)
+        $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $collection + "/" + $item.dmrecord + "/json")
+        $item | Add-Member -NotePropertyName id -NotePropertyValue ($collection + "_" + $item.dmrecord)
+        $item | Add-Member -NotePropertyName uri -NotePropertyValue ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmrecord + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0")
+        $item | Add-Member -NotePropertyName filename -NotePropertyValue ("$path\" + $collection + "_" + $item.dmrecord + ".jpg")
+    }
+
+    Write-Verbose "$(Get-Date -Format u) Export item CSV with additional information for each item."
     $items | Export-Csv $path\items.csv -NoTypeInformation
     return $nonImages
     Write-Verbose "$(. Get-TimeStamp) Get-Images-List complete for $collection"
@@ -745,10 +762,8 @@ function Get-Images-Using-API {
         The collection alias for a CONTENTdm collection.
         .PARAMETER public
         The URL for the Public UI for a CONTENTdm instance.
-        .PARAMETER log
-        The filepath or variable of a log to send console output.
         .EXAMPLE
-        Get-Images-Using-API -path E:\ -server https://server17287.contentdm.oclc.org -collection benson -public https://digital.libraries.psu.edu -throttle 8 -log $log_batchOCR
+        Get-Images-Using-API -path E:\ -server https://server17287.contentdm.oclc.org -collection benson -public https://digital.libraries.psu.edu
 	    .INPUTS
         System.String
         System.Integer
@@ -776,21 +791,8 @@ function Get-Images-Using-API {
     $startTime = $(Get-Date)
     Write-Verbose "$(Get-TimeStamp) Get-Images-Using-API starting for $collection."
     Write-Verbose "$(Get-TimeStamp) Import item CSV and call CONTENTdm API for additional information about the item."
-
     $items = Import-Csv $path\items.csv
     $total = ($items | Measure-Object).Count
-
-    foreach ($item in $items) {
-        $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $collection + "/" + $item.dmrecord + "/json")
-        $item | Add-Member -NotePropertyName id -NotePropertyValue ($collection + "_" + $item.dmrecord)
-        $item | Add-Member -NotePropertyName uri -NotePropertyValue ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmrecord + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0")
-        $item | Add-Member -NotePropertyName filename -NotePropertyValue ("$path\" + $collection + "_" + $item.dmrecord + ".jpg")
-    }
-
-    $items | Export-Csv -Path $path\items.csv -NoTypeInformation
-
-    Write-Verbose "$(Get-TimeStamp) Export item CSV with additional information for each item."
-    $items | export-csv $path\items.csv -NoTypeInformation
     $i = 0
     $jobs = @()
     Write-Verbose "$(Get-TimeStamp) For each item, download a JPG image using the CONTENTdm API."
@@ -802,7 +804,7 @@ function Get-Images-Using-API {
         $jobs += Start-Job { Invoke-WebRequest $using:uri -Method Get -OutFile $using:file } -Name "$id-api-$startTime"
         $jobName = $jobs[-1].Name
         Write-Information "@{Job Name=$jobName; CDM ID=$id; action=download}"
-        Write-Output "$(Get-TimeStamp)`t[Job: $jobName]`tDownload $id ($i of $total)"
+        Write-Output "$(Get-TimeStamp)`t`t[Job: $jobName]`t`tDownload $id ($i of $total)"
         Write-Verbose "$(Get-TimeStamp) Request: Invoke-WebRequest $uri -Method Get -OutFile $file"
     }
     Do {
@@ -817,6 +819,27 @@ function Get-Images-Using-API {
 #IIIF for images. Test different size tifs for smaller and quicker files, eg /full/2000, /0/default.jpg
 # Not working as of 2019-08-23, still working on getting URI and ID paired together for downloading...
 function Get-Images-Using-IIIF {
+        <#
+	    .SYNOPSIS
+	    Parallel download JPG images from a CONTENTdm collection using IIIF.
+	    .DESCRIPTION
+        Starting from the collection-level IIIF presentation manifest, find all the object/item presentation manifests for the collection. Build a list of images to download. Parallel download images using the IIIF Image API.
+        .PARAMETER public
+        The URL for the Public UI for a CONTENTdm instance.
+        .PARAMETER collection
+        The collection alias for a CONTENTdm collection.
+        .PARAMETER path
+        The path to a staging directory.
+        .EXAMPLE
+        Get-Images-Using-IIIF -public https://digital.libraries.psu.edu -collection benson -path E:\
+	    .INPUTS
+        System.String
+        .NOTES
+        This function does not return any bitstreams or data, the changes takeplace within the specified path on the filesystem.
+        Only objects/items with images have presentation manifests in CONTENTdm.
+        Monograph Compound Objects are not supported at this time.
+        Large numbers of downloads should use the Get-Images-Using-API-Throttled instead.
+	#>
     [cmdletbinding()]
     Param(
         [Parameter()]
@@ -897,6 +920,55 @@ function Get-Images-Using-IIIF {
 
 # Workflows require Powershell 5.1, i.e. Windows...
 # When PowerShell 7 is released, ForEach-Object will have -Parallel and -ThrottleLimit parameters, can convert these to functions. https://devblogs.microsoft.com/powershell/powershell-7-preview-3/#user-content-foreach-object--parallel
+Workflow Get-Images-Using-API-Throttle {
+    [cmdletbinding()]
+    Param(
+        [Parameter()]
+        [string]
+        $collection,
+
+        [Parameter()]
+        [string]
+        $path,
+
+        [Parameter()]
+        [string]
+        $server,
+
+        [Parameter()]
+        [string]
+        $public,
+
+        [Parameter()]
+        [int16]
+        $throttle
+    )
+    $startTime = "$(Get-Date)"
+    Write-Verbose "$(Get-Date -Format u) Get-Images-Using-API-Throttle starting for $collection."
+    Write-Verbose "$(Get-Date -Format u) Import item CSV and call CONTENTdm API for additional information about the item."
+    $items = Import-Csv $path\items.csv
+    $total = ($items | Measure-Object).Count
+    $jobs = @()
+    $i = 0
+    foreach -Parallel -Throttle $throttle ($item in $items) {
+        $workflow:i++
+        $uri = ($item.uri)
+        $file = $item.filename
+        $id = $item.id
+        $workflow:jobs += Start-Job { Invoke-WebRequest $using:uri -Method Get -OutFile $using:file } -Name "$id-api-$startTime"
+        $joblabel = $jobs[-1].Name
+        Write-Information "@{Job Name=$joblabel; CDM ID=$id; action=download}"
+        Write-Output "$(Get-Date -Format u)`t`t[Job: $joblabel]`t`tDownload $id ($i of $total)"
+        Write-Verbose "$(Get-Date -Format u) Request: Invoke-WebRequest $uri -Method Get -OutFile $file"
+    }
+
+    $completed = (Get-Job -Name "$collection*-api-$startTime" | Where-Object { $_.State -eq "Completed" }).count
+    Write-Progress -Activity "Get Images Using API Throttled" -Status "Downloading images..." -PercentComplete (($completed/$($items.count)) * 100)
+
+    $endTime = "$(Get-Date)"
+    Write-Verbose "$(Get-Date -Format u) Get-Images-Using-API starting for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"
+}
+
 Workflow Convert-to-JP2 {
     [cmdletbinding()]
     Param(
@@ -1161,7 +1233,7 @@ Workflow Update-OCR {
         $workflow:i++
         InlineScript {
             $id = $using:item.id
-            Write-Progress -Activity "Update OCR" -Status "Processing $id" -PercentComplete ($using:l / $using:total * 100)
+            Write-Progress -Activity "Update OCR" -Status "Converting JPG to grayscale TIF" -CurrentOperation "Processing $id, $using:i of $using:total" -PercentComplete ($using:l / $using:total * 100)
             Write-Verbose "$(Get-Date -Format u) OCR starting for $id. ($using:i of $using:total)"
             $imageFile = $using:item.filename
             if ((Test-Path "$imageFile") -and ((Get-Item $imageFile).Length -gt 0kb)) {
@@ -1171,13 +1243,14 @@ Workflow Update-OCR {
             $imageFile = ($using:path + "\" + $id + ".tif")
             $imageBase = ($using:path + "\" + $id)
             if (Test-Path "$imageFile") {
+                Write-Progress -Activity "Update OCR" -Status "Running Tesseract OCR on TIF" -CurrentOperation "Processing $id, $using:i of $using:total" -PercentComplete ($using:l / $using:total * 100)
                 Write-Verbose "$(Get-Date -Format u) Running OCR on $imageFile."
                 Write-Debug "Command: Invoke-Expression $using:tesseract $using:imageFile $using:imageBase txt quiet"
                 Invoke-Expression "$using:tesseract $using:imageFile $using:imageBase txt quiet"
             }
             $imageTxt = ($using:path + "\" + $id + ".txt")
             if (Test-Path "$imageTxt") {
-                Write-Progress -Activity "Update OCR" -Status "Processing $ id" -PercentComplete ($using:l / $using:total * 100)
+                Write-Progress -Activity "Update OCR" -Status "Optimizing TXT for CONTENTdm Indexing" -CurrentOperation "Processing $id, $using:i of $using:total" -PercentComplete ($using:l / $using:total * 100)
                 Write-Verbose "$(Get-Date -Format u) Optimizing the OCR for CONTENTdm indexing."
                 (Get-Content $imageTxt) | ForEach-Object {
                     $_ -replace '[^a-zA-Z0-9_.,!?$%#@/\s]' `
@@ -1197,7 +1270,7 @@ Workflow Update-OCR {
         $workflow:l++
         if (Test-Path $($path + "\" + $id + ".txt")) { $ocrCount++ } else { $nonText++ }
         Write-Verbose "$(Get-Date -Format u) OCR complete for $id."
-        Write-Progress -Activity "Update OCR" -Status "Processing $id" -PercentComplete ($l / $total * 100)
+        Write-Progress -Activity "Update OCR" -Status "OCR finishing" -CurrentOperation "Processing $id" -PercentComplete ($l / $total * 100)
     }
     Write-Verbose "$(Get-Date -Format u) Update-OCR complete. $ocrCount images with text out of $i images processed."
     return $ocrCount, $nonText
