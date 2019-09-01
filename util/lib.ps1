@@ -22,6 +22,7 @@ function Get-Org-Settings {
         .OUTPUTS
         System.Hashtable
     #>
+    [cmdletbinding()]
     Write-Verbose "Get-Org-Settings checking for stored settings."
     $Return = @{ }
     if (Test-Path settings\org.csv) {
@@ -568,7 +569,6 @@ function Get-Images-List {
     Write-Verbose "For each record, derive image or nonimage."
     $r = 0
     foreach ($record in $records) {
-        # Deal with paging for large record sets? max 1024?
         $r++
         Write-Progress -Activity "Get-Images-List" -Status "Finding images in $collection" -CurrentOperation "Record $r of $($records.count)" -PercentComplete (($r / $records.count) * 100)
         if ($record.filetype -eq "cpd") {

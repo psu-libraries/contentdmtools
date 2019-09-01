@@ -98,7 +98,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
         New-UDInput -Title "Batch Create Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\batch'
             New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue "metadata.csv"
-            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "2"
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
             New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "extract", "skip") -DefaultValue "both"
             New-UDInputField -Type 'select' -Name 'ocrengine' -Placeholder "OCR Engine" -Values @("ABBYY", "tesseract") -DefaultValue "tesseract"
@@ -155,7 +155,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
             New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
             New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
-            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "2"
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
             New-UDInputField -Type 'select' -Name 'method' -Placeholder "Download Method" -Values @("API", "IIIF") -DefaultValue "API"
         } -Endpoint {
             Param($collection, $field, $public, $server, $license, $path, $user, $throttle, $method)
@@ -181,13 +181,36 @@ $Batch = New-UDPage -Name "Batches" -Content {
     }
 
     New-UDLayout -Columns 2 -Content {
+        New-UDInput -Title "Published Collection Alias Look Up" -Id "getCollections" -SubmitText "Look Up" -Content {
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+        } -Endpoint {
+            Param($server)
+            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionList/json"
+            New-UDInputAction -Content @(
+                New-UDGrid -Title "Published Collection Alias'" -Headers @("Name", "Alias") -Properties @("name", "secondary_alias") -Endpoint { $data | Out-UDGridData }
+            )
+        }
+
+        New-UDInput -Title "Collection Field Properties Look Up" -Id "getCollProp" -SubmitText "Look Up" -Content {
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+        } -Endpoint {
+            Param($collection, $server)
+            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionFieldInfo/$collection/json"
+            New-UDInputAction -Content @(
+                New-UDGrid -Title "Collection Field Properties: $collection" -Headers @("Name", "Nickname", "Data Type", "Large", "Searchable", "Hidden", "Admin", "Required", "Controlled Vocab") -Properties @("name", "nick", "type", "size", "search", "hide", "admin", "req", "vocab") -Endpoint { $data | Out-UDGridData }
+            )
+        }
+    }
+
+    New-UDLayout -Columns 2 -Content {
         New-UDInput -Title "Collection Metadata Export" -Id "getMetadataTxt" -SubmitText "Export" -Content {
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
             New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
         } -Endpoint {
-            Param($user, $server, $collection, $path)
+            Param($user,$server,$collection,$path)
             Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
             if (Test-Path $cdmt_root\settings\user.csv) {
                 $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
@@ -223,29 +246,6 @@ $Batch = New-UDPage -Name "Batches" -Content {
             Invoke-RestMethod "$server/cgi-bin/admin/getfile.exe?CISOMODE=1&CISOFILE=/$collection/index/description/export.txt" -Headers $Headers -OutFile "$path\$collection.txt"
             New-UDInputAction -Toast "Collection metadata exported to $path\$collection.txt"
         }
-        New-UDInput -Title "Collection Alias Look Up" -Id "getCollections" -SubmitText "Look Up" -Content {
-            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
-        } -Endpoint {
-            Param($server)
-            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionList/json"
-            New-UDInputAction -Content @(
-                New-UDGrid -Title "Published Collection Alias'" -Headers @("Name", "Alias") -Properties @("name", "secondary_alias") -Endpoint { $data | Out-UDGridData }
-            )
-        }
-    }
-
-    New-UDLayout -Columns 1 -Content {
-        New-UDInput -Title "Collection Field Properties Look Up" -Id "getCollProp" -SubmitText "Look Up" -Content {
-            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
-            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
-        } -Endpoint {
-            Param($collection, $server)
-            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionFieldInfo/$collection/json"
-            New-UDInputAction -Content @(
-                New-UDGrid -Title "Collection Field Properties: $collection" -Headers @("Name", "Nickname", "Data Type", "Large", "Searchable", "Hidden", "Admin", "Required", "Controlled Vocab") -Properties @("name", "nick", "type", "size", "search", "hide", "admin", "req", "vocab") -Endpoint { $data | Out-UDGridData }
-            )
-        }
-
     }
 }
 
