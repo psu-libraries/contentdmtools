@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file. The format 
   - Converting images for OCR.
   - Running OCR.
 - IIIF download method for Batch OCR. (Monograph compound-objects not supported at this time.)
-- Collection metadata export (tab-delimited text) feature.
+- Collection metadata export (tab-delimited text), unlock collection metadata, index collection metadata features added to the dashboard.
   - CONTENTdm credentials must be stored for user to export metadata.
 - PDFtk and xpdf utilities added.
   - Text can now be extracted from existing searchable PDFs if included in object folders rather than running OCR.
