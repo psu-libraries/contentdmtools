@@ -10,6 +10,19 @@ function Get-TimeStamp {
     return (Get-Date -Format u)
 }
 function Get-Org-Settings {
+  <#
+	    .SYNOPSIS
+        Retrieve cached organization settings.
+	    .DESCRIPTION
+	    Parse cached CSV file of organization settings, return cached settings and set them as global defaults.
+	    .EXAMPLE
+        Get-Org-Settings
+	    .INPUTS
+        System.String
+        .OUTPUTS
+        System.Hashtable
+    #>
+    [cmdletbinding()]
     Write-Verbose "Get-Org-Settings checking for stored settings."
     $Return = @{ }
     if (Test-Path settings\org.csv) {
@@ -30,8 +43,76 @@ function Get-Org-Settings {
     Return $Return
 }
 
+function Get-User-Settings {
+        <#
+	    .SYNOPSIS
+        Retrieve cached user credentials.
+	    .DESCRIPTION
+	    Parse cached CSV file of user credentials, if user exists, convert the secure string and return it. If it does not exist, ask the user to enter a password.
+	    .PARAMETER user
+        A CONTENTdm user.
+	    .EXAMPLE
+	    $pw =  Get-User-Settings -user $user
+	    .INPUTS
+        System.String
+        .OUTPUTS
+        System.String
+	#>
+    [cmdletbinding()]
+    Param(
+        [Parameter()]
+        [String]
+        $user
+    )
+    # Check for stored user password, if not available get user input.
+    Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
+    if (Test-Path $cdmt_root\settings\user.csv) {
+        $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+        $usrcsv = Import-Csv $usrcsv
+        $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
+            $SecurePassword = $_.password | ConvertTo-SecureString
+            $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+            $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+            $null = $BSTR
+        }
+        if ("$user" -notin $usrcsv.user) {
+            Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
+            [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+            $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+            $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+            $null = $BSTR
+        }
+    }
+    Else {
+        Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
+        [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+        $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+        $null = $BSTR
+    }
+    Return $pw
+}
+
 #SOAP functions # https://ponderingthought.com/2010/01/17/execute-a-soap-request-from-powershell/
 function Send-SOAPRequest {
+<#
+	    .SYNOPSIS
+        Send SOAP XML to SOAP API Endpoint.
+	    .DESCRIPTION
+	    Send SOAP XML message to SOAP API and listen for return response.
+	    .PARAMETER SOAPRequest
+        The SOAP XML message to send.
+        .PARAMETER URL
+        The URI of the SOAP API Endpoint.
+        .PARAMETER editCount
+        Edit success counter.
+	    .EXAMPLE
+	    Send-SOAPRequest -SOAPRequest $SOAPRequest -URL https://worldcat.org/webservices/contentdm/catcher?wsdl -editCount $editCount
+	    .INPUTS
+        System.String
+        .OUTPUTS
+        System.Object
+	#>
     [cmdletbinding()]
     Param(
         [Parameter()]
@@ -79,6 +160,22 @@ function Send-SOAPRequest {
 }
 
 function Send-SOAPRequestFromFile {
+    <#
+	    .SYNOPSIS
+        Send SOAP XML to SOAP API Endpoint.
+	    .DESCRIPTION
+	    Send SOAP XML message to SOAP API and listen for return response.
+	    .PARAMETER SOAPRequestFile
+        The SOAP XML message to send.
+        .PARAMETER URL
+        The URI of the SOAP API Endpoint.
+	    .EXAMPLE
+	    Send-SOAPRequestFromFile -SOAPRequest $SOAPRequest -URL https://worldcat.org/webservices/contentdm/catcher?wsdl
+	    .INPUTS
+        System.String
+        .OUTPUTS
+        System.Object
+	#>
     [cmdletbinding()]
     Param(
         [Parameter()]
@@ -126,11 +223,11 @@ function Split-Object-Metadata {
     # Trim spaces from the headers
     Write-Verbose "Trim spaces from headers in metadata.csv"
     $SourceHeadersDirty = Get-Content -Path $path\$metadata -First 2 | ConvertFrom-Csv
-    $SourceHeadersCleaned = $SourceHeadersDirty.PSObject.Properties.Name.Trim()
+    $SourceHeadersTrimmed = $SourceHeadersDirty.PSObject.Properties.Name.Trim()
 
     <#     # Add the File Name field at the end if it wasn't included in the original metadata
     Write-Verbose "Add column for File Name, if necessary."
-    if ("File Name" -notin $SourceHeadersCleaned) {
+    if ("File Name" -notin $SourceHeadersTrimmed) {
         $tmpcsv = Import-CSV -Path $path\$metadata | Select-Object *, "File Name" | ConvertFrom-Csv
     } #>
 
@@ -138,11 +235,11 @@ function Split-Object-Metadata {
     Write-verbose "Import metadata using trimmed headers"
     if ($null -ne $tmpCSV) {
         $SourceHeadersDirty = Get-Content -Path $tmpCSV -First 2 | ConvertFrom-Csv
-        $SourceHeadersCleaned = $SourceHeadersDirty.PSObject.Properties.Name.Trim()
-        $csv = Import-CSV $tmpCSV -Header $SourceHeadersCleaned | Select-Object -Skip 1
+        $SourceHeadersTrimmed = $SourceHeadersDirty.PSObject.Properties.Name.Trim()
+        $csv = Import-CSV $tmpCSV -Header $SourceHeadersTrimmed | Select-Object -Skip 1
     }
     else {
-        $csv = Import-CSV -Path $path\$metadata -Header $SourceHeadersCleaned | Select-Object -Skip 1
+        $csv = Import-CSV -Path $path\$metadata -Header $SourceHeadersTrimmed | Select-Object -Skip 1
     }
 
     # Trim all the fields
@@ -466,17 +563,14 @@ function Get-Images-List {
     Write-Verbose "$(. Get-TimeStamp) Get-Images-List starting for $collection"
     Write-Verbose "Make call to CONTENTdm API for collection records."
     $hits = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmQuery/$collection/0/dmrecord!find/nosort/1024/1/0/0/0/0/1/0/json"
-    # Need to deal with pager/pagination of results, maxes at 1024?
     $records = $hits.records
-
     $items = @()
     $nonImages = 0
-
     Write-Verbose "For each record, derive image or nonimage."
-    $r=0
+    $r = 0
     foreach ($record in $records) {
         $r++
-        Write-Progress -Activity "Get-Images-List" -Status "Finding images in $collection" -CurrentOperation "Record $r of $($records.count)" -PercentComplete (($r/$records.count)*100)
+        Write-Progress -Activity "Get-Images-List" -Status "Finding images in $collection" -CurrentOperation "Record $r of $($records.count)" -PercentComplete (($r / $records.count) * 100)
         if ($record.filetype -eq "cpd") {
             $pointer = $record.pointer
             $pages = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCompoundObjectInfo/$collection/$pointer/json"
@@ -522,12 +616,11 @@ function Get-Images-List {
         }
     }
 
-    # Retrieve additional image properties for downloading
     Write-Verbose "$(Get-Date -Format u) Use CONTENTdm API to retrieve additional image properties needed for downloading."
     $m = 0
     foreach ($item in $items) {
         $m++
-        Write-Progress -Activity "Get-Images-List" -Status "Retrieve additional image information for dmrecord $($item.dmrecord) ($m of $($items.Count))" -PercentComplete (($m/$items.count) * 100)
+        Write-Progress -Activity "Get-Images-List" -Status "Retrieve additional image information for dmrecord $($item.dmrecord) ($m of $($items.Count))" -PercentComplete (($m / $items.count) * 100)
         $imageInfo = Invoke-RestMethod ($server + "/dmwebservices/index.php?q=dmGetImageInfo/" + $collection + "/" + $item.dmrecord + "/json")
         $item | Add-Member -NotePropertyName id -NotePropertyValue ($collection + "_" + $item.dmrecord)
         $item | Add-Member -NotePropertyName uri -NotePropertyValue ($public + "/utils/ajaxhelper/?CISOROOT=" + $collection + "&CISOPTR=" + $item.dmrecord + "&action=2&DMSCALE=100&DMWIDTH=" + $imageInfo.width + "&DMHEIGHT=" + $imageInfo.height + "&DMX=0&DMY=0")
@@ -819,7 +912,7 @@ function Get-Images-Using-API {
 #IIIF for images. Test different size tifs for smaller and quicker files, eg /full/2000, /0/default.jpg
 # Not working as of 2019-08-23, still working on getting URI and ID paired together for downloading...
 function Get-Images-Using-IIIF {
-        <#
+    <#
 	    .SYNOPSIS
 	    Parallel download JPG images from a CONTENTdm collection using IIIF.
 	    .DESCRIPTION
@@ -960,10 +1053,11 @@ Workflow Get-Images-Using-API-Throttle {
         Write-Information "@{Job Name=$joblabel; CDM ID=$id; action=download}"
         Write-Output "$(Get-Date -Format u)`t`t[Job: $joblabel]`t`tDownload $id ($i of $total)"
         Write-Verbose "$(Get-Date -Format u) Request: Invoke-WebRequest $uri -Method Get -OutFile $file"
+        #Eliminate all above write's and replace with below write-progress? 53K LaVie job -- downloads finished much faster than writing did..., would be faster to avoid writing to screen I think...
     }
 
     $completed = (Get-Job -Name "$collection*-api-$startTime" | Where-Object { $_.State -eq "Completed" }).count
-    Write-Progress -Activity "Get Images Using API Throttled" -Status "Downloading images..." -PercentComplete (($completed/$($items.count)) * 100)
+    Write-Progress -Activity "Get Images Using API Throttled" -Status "Downloading images..." -PercentComplete (($completed / $($items.count)) * 100)
 
     $endTime = "$(Get-Date)"
     Write-Verbose "$(Get-Date -Format u) Get-Images-Using-API starting for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"

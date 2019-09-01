@@ -11,12 +11,16 @@ All notable changes to this project will be documented in this file. The format 
   - Downloading images.
   - Converting images for OCR.
   - Running OCR.
-- IIIF download method for Batch OCR. Uses throttled downloads for collections over 200 images.
+- IIIF download method for Batch OCR. (Monograph compound-objects not supported at this time.)
+- Collection metadata export (tab-delimited text) feature.
+  - CONTENTdm credentials must be stored for user to export metadata.
 - PDFtk and xpdf utilities added.
   - Text can now be extracted from existing searchable PDFs if included in object folders rather than running OCR.
 - Verbose logging and help text added to scripts and functions. Progress indicators, where possible, for parallel actions.
 ### Changed
 - Organizational settings and user credentials are now saved in a CSV and managed through dashboard GUI with CLI fallback. Passwords are stored as secure strings.
+- Normal field names can now be used for batch edits, CONTENTdm Tools will map field names to field nicknames automatically.
+- Batch OCR uses throttled downloads for collections with over 200 images to download.
 - OCR text now preserves line breaks, but removes duplicate line breaks.
 - "Start Batches" on navigation menu now just called "Batches".
 - Collection and field lookups moved into a single UI row.

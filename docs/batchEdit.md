@@ -13,31 +13,29 @@ Run `.\batchEdit.ps1 -csv metadata.csv -collection collectionAlias -user CONTENT
   - `-license` -- CONTENTdm License. (Defaults to stored settings is left out.)
   - `-verbose` -- Optional parameter to increase logging output.
 
-  * **Field names used as headers are not the same as the field name labels in CONTENTdm**. The dashboard provides a Collection Field Properties Lookup that will display the **field nicknames** for a collection. Also, yoou can look at the `CISONICK` value in the Field Properties in the Admin Gui for the correct field name to use as the CSV header.
   * **Controlled vocabularies and required fields (other than title) must be turned off before pitching metadata to catcher**. Make note of the settings and turn them back on after you are done with batch editing.
 
 ### Sample metadata.csv
-| dmrecord | title         | subjec        |
-| -------- | ------------- | ------------- |
-| 90       | Batch Edit 20 | Batch Edit 17 |
-| 91       | Batch Edit 01 | Batch Edit 24 |
-| 92       | Batch Edit 02 | Batch Edit 25 |
-| 93       | Batch Edit 03 | Batch Edit 26 |
-| 94       | Batch Edit 04 | Batch Edit 27 |
-| 99       | OBJECT TITLE  | Batch Edit 18 |
-| 108      | OBJECT TITLE  | Batch Edit 19 |
+| CONTENTdm number | Title         | Subject       |
+| ---------------- | ------------- | ------------- |
+| 90               | Batch Edit 20 | Batch Edit 17 |
+| 91               | Batch Edit 01 | Batch Edit 24 |
+| 92               | Batch Edit 02 | Batch Edit 25 |
+| 93               | Batch Edit 03 | Batch Edit 26 |
+| 94               | Batch Edit 04 | Batch Edit 27 |
+| 99               | OBJECT TITLE  | Batch Edit 18 |
+| 108              | OBJECT TITLE  | Batch Edit 19 |
 
 ### Sample Workflow
 - Export metadata from CONTENTdm.
 - Work in Excel or Open Refine and batch edit.
 - Remove fields/columns with no changes.
 - Remove rows with no changes. (This isn't critical, but good practice.)
-- Rename fields/columns with field nickname as indicated above.
-  - The CONTENTdm record number must always be included with the name `dmrecord`, as the first column in the CSV.
+  - The CONTENTdm record number must always be included as the first column in the CSV. The field name is usually CONTENTdm number and file nickname is usually dmrecord.
 - Note field property configurations and disable required fields and controlled vocabulary in Admin GUI.
-- Export UTF-8 CSV called metadata.csv and save it in the directory where `batchEdit.ps1` is saved.
-  - You can pass any CSV with `-csv path.csv` as the first parameter when executing the script.
-- Run `batchEdit.ps1 -csv path\metadata.csv -collection collectionAlias -server https://URLforAdminUI -user CONTENTdmUserName` in a PowerShell window.
+- Export UTF-8 CSV called metadata.csv and use CONTENTdm ToolS Dashboard to upload changes.
+  - Or run in manually. You can pass any CSV with `-csv C:\path\to.csv` as the first parameter when executing the script.
+  - Run `batchEdit.ps1 -csv path\metadata.csv -collection collectionAlias -server https://URLforAdminUI -license XXXX-XXXX-XXXX-XXXX -user CONTENTdmUserName` in a PowerShell window.
 - Index the collection.
 - Re-configure field properties.
 - Review log for any errors.

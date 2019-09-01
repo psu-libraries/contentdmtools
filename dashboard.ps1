@@ -181,7 +181,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
     }
 
     New-UDLayout -Columns 2 -Content {
-        New-UDInput -Title "Published Collection Alias Look Up" -Id "getCollections" -SubmitText "Submit" -Content {
+        New-UDInput -Title "Published Collection Alias Look Up" -Id "getCollections" -SubmitText "Look Up" -Content {
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
         } -Endpoint {
             Param($server)
@@ -191,7 +191,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
             )
         }
 
-        New-UDInput -Title "Collection Field Properties Look Up" -Id "getCollProp" -SubmitText "Submit" -Content {
+        New-UDInput -Title "Collection Field Properties Look Up" -Id "getCollProp" -SubmitText "Look Up" -Content {
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
         } -Endpoint {
@@ -200,6 +200,51 @@ $Batch = New-UDPage -Name "Batches" -Content {
             New-UDInputAction -Content @(
                 New-UDGrid -Title "Collection Field Properties: $collection" -Headers @("Name", "Nickname", "Data Type", "Large", "Searchable", "Hidden", "Admin", "Required", "Controlled Vocab") -Properties @("name", "nick", "type", "size", "search", "hide", "admin", "req", "vocab") -Endpoint { $data | Out-UDGridData }
             )
+        }
+    }
+
+    New-UDLayout -Columns 2 -Content {
+        New-UDInput -Title "Collection Metadata Export" -Id "getMetadataTxt" -SubmitText "Export" -Content {
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+            New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
+            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
+        } -Endpoint {
+            Param($user,$server,$collection,$path)
+            Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
+            if (Test-Path $cdmt_root\settings\user.csv) {
+                $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+                $usrcsv = Import-Csv $usrcsv
+                $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
+                    $SecurePassword = $_.password | ConvertTo-SecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+                if ("$user" -notin $usrcsv.user) {
+                    Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
+                    [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+            }
+            Else {
+                Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
+                [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                $null = $BSTR
+            }
+            $pair = "$($user):$($pw)"
+            $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+            $basicAuthValue = "Basic $encodedCreds"
+            $Headers = @{
+                Authorization = $basicAuthValue
+            }
+            Invoke-WebRequest "$server/cgi-bin/admin/export.exe?CISODB=/$collection&CISOOP=ascii&CISOMODE=1&CISOPTRLIST=" -Headers $Headers | Out-Null
+            Invoke-RestMethod "$server/cgi-bin/admin/getfile.exe?CISOMODE=1&CISOFILE=/$collection/index/description/export.txt" -Headers $Headers -OutFile "$path\$collection.txt"
+            New-UDInputAction -Toast "Collection metadata exported to $path\$collection.txt"
         }
     }
 }
@@ -218,7 +263,7 @@ $Navigation = New-UDSideNav -Content {
     New-UDSideNavItem -Text "Documentation" -Children {
         New-UDSideNavItem -Text "Batch Create" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchCreateCompoundObjects.md' -Icon plus_square
         New-UDSideNavItem -Text "Batch Edit" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchEdit.md' -Icon edit
-        New-UDSideNavItem -Text "Batch Re-OCR" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchOCR.md' -Icon font
+        New-UDSideNavItem -Text "Batch OCR" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchOCR.md' -Icon font
     }
 }
 
