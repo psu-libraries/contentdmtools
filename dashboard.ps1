@@ -98,7 +98,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
         New-UDInput -Title "Batch Create Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\batch'
             New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue "metadata.csv"
-            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "2"
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
             New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "extract", "skip") -DefaultValue "both"
             New-UDInputField -Type 'select' -Name 'ocrengine' -Placeholder "OCR Engine" -Values @("ABBYY", "tesseract") -DefaultValue "tesseract"
@@ -155,7 +155,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
             New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
             New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
-            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "2"
             New-UDInputField -Type 'select' -Name 'method' -Placeholder "Download Method" -Values @("API", "IIIF") -DefaultValue "API"
         } -Endpoint {
             Param($collection, $field, $public, $server, $license, $path, $user, $throttle, $method)
@@ -180,37 +180,14 @@ $Batch = New-UDPage -Name "Batches" -Content {
         }
     }
 
-    New-UDLayout -Columns 2 -Content {
-        New-UDInput -Title "Published Collection Alias Look Up" -Id "getCollections" -SubmitText "Look Up" -Content {
-            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
-        } -Endpoint {
-            Param($server)
-            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionList/json"
-            New-UDInputAction -Content @(
-                New-UDGrid -Title "Published Collection Alias'" -Headers @("Name", "Alias") -Properties @("name", "secondary_alias") -Endpoint { $data | Out-UDGridData }
-            )
-        }
-
-        New-UDInput -Title "Collection Field Properties Look Up" -Id "getCollProp" -SubmitText "Look Up" -Content {
-            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
-            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
-        } -Endpoint {
-            Param($collection, $server)
-            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionFieldInfo/$collection/json"
-            New-UDInputAction -Content @(
-                New-UDGrid -Title "Collection Field Properties: $collection" -Headers @("Name", "Nickname", "Data Type", "Large", "Searchable", "Hidden", "Admin", "Required", "Controlled Vocab") -Properties @("name", "nick", "type", "size", "search", "hide", "admin", "req", "vocab") -Endpoint { $data | Out-UDGridData }
-            )
-        }
-    }
-
-    New-UDLayout -Columns 2 -Content {
-        New-UDInput -Title "Collection Metadata Export" -Id "getMetadataTxt" -SubmitText "Export" -Content {
+    New-UDLayout -Columns 3 -Content {
+        New-UDInput -Title "Export Collection Metadata" -Id "exportCollectionMetadata" -SubmitText "Export" -Content {
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
             New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
         } -Endpoint {
-            Param($user,$server,$collection,$path)
+            Param($user, $server, $collection, $path)
             Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
             if (Test-Path $cdmt_root\settings\user.csv) {
                 $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
@@ -244,8 +221,114 @@ $Batch = New-UDPage -Name "Batches" -Content {
             }
             Invoke-WebRequest "$server/cgi-bin/admin/export.exe?CISODB=/$collection&CISOOP=ascii&CISOMODE=1&CISOPTRLIST=" -Headers $Headers | Out-Null
             Invoke-RestMethod "$server/cgi-bin/admin/getfile.exe?CISOMODE=1&CISOFILE=/$collection/index/description/export.txt" -Headers $Headers -OutFile "$path\$collection.txt"
-            New-UDInputAction -Toast "Collection metadata exported to $path\$collection.txt"
+            New-UDInputAction -Toast "Collection metadata exported to $path\$collection.txt." -Duration 5000
         }
+
+        New-UDInput -Title "Unlock Collection Metadata" -Id "unlockCollectionMetadata" -SubmitText "Unlock" -Content {
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
+        } -Endpoint {
+            Param($user, $server, $collection)
+            Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
+            if (Test-Path $cdmt_root\settings\user.csv) {
+                $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+                $usrcsv = Import-Csv $usrcsv
+                $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
+                    $SecurePassword = $_.password | ConvertTo-SecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+                if ("$user" -notin $usrcsv.user) {
+                    Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
+                    [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+            }
+            Else {
+                Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
+                [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                $null = $BSTR
+            }
+            $pair = "$($user):$($pw)"
+            $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+            $basicAuthValue = "Basic $encodedCreds"
+            $Headers = @{
+                Authorization = $basicAuthValue
+            }
+            Invoke-WebRequest "$server/cgi-bin/admin/unlocksubset.exe?CISODB=/$collection&CISOPTRLIST=all&CISOMODE=1" -Headers $Headers | Out-Null
+            New-UDInputAction -Toast "$collection metadata unlocked." -Duration 5000
+        }
+
+        New-UDInput -Title "Index Collection Metadata" -Id "indexCollectionMetadata" -SubmitText "Index" -Content {
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
+        } -Endpoint {
+            Param($user, $server, $collection)
+            Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
+            if (Test-Path $cdmt_root\settings\user.csv) {
+                $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+                $usrcsv = Import-Csv $usrcsv
+                $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
+                    $SecurePassword = $_.password | ConvertTo-SecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+                if ("$user" -notin $usrcsv.user) {
+                    Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
+                    [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+            }
+            Else {
+                Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
+                [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                $null = $BSTR
+            }
+            $pair = "$($user):$($pw)"
+            $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+            $basicAuthValue = "Basic $encodedCreds"
+            $Headers = @{
+                Authorization = $basicAuthValue
+            }
+            Invoke-WebRequest "$server/cgi-bin/admin/putsched.exe?CISODB=/$collection&CISOOP=index&CISOTYPE1=now" -Headers $Headers | Out-Null
+            New-UDInputAction -Toast "$collection is currently indexing." -Duration 5000
+            New-UDLink -Text "CONTENTdm Admin UI" -Url "$server/cgi-bin/admin/bld.exe?CISODB=/$collection"
+        }
+    }
+
+    New-UDLayout -Columns 2 -Content {
+        New-UDInput -Title "Collection Alias Look Up" -Id "getCollections" -SubmitText "Look Up" -Content {
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+        } -Endpoint {
+            Param($server)
+            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionList/json"
+            New-UDInputAction -Content @(
+                New-UDGrid -Title "Published Collection Alias'" -Headers @("Name", "Alias") -Properties @("name", "secondary_alias") -Endpoint { $data | Out-UDGridData }
+            )
+        }
+        New-UDInput -Title "Collection Field Properties Look Up" -Id "getCollProp" -SubmitText "Look Up" -Content {
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+        } -Endpoint {
+            Param($collection, $server)
+            $data = Invoke-RestMethod "$server/dmwebservices/index.php?q=dmGetCollectionFieldInfo/$collection/json"
+            New-UDInputAction -Content @(
+                New-UDGrid -Title "Collection Field Properties: $collection" -Headers @("Name", "Nickname", "Data Type", "Large", "Searchable", "Hidden", "Admin", "Required", "Controlled Vocab") -Properties @("name", "nick", "type", "size", "search", "hide", "admin", "req", "vocab") -Endpoint { $data | Out-UDGridData }
+            )
+        }
+
     }
 }
 
@@ -282,4 +365,4 @@ $theme = New-UDTheme -Name "cdm-tools" -Definition @{
 
 Start-UDDashboard -Content {
     New-UDDashboard -Title "CONTENTdm Tools Dashboard" -Navigation $Navigation -NavbarLinks $NavBarLinks -Theme $theme -Pages @($HomePage, $Batch, $Settings)
-} -Port 1000 -Name 'cdm-tools' -AutoReload
+} -Port 1000 -Name 'cdm-tools' #-AutoReload

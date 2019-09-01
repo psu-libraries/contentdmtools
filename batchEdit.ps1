@@ -136,7 +136,7 @@ ForEach ($record in $metadata) {
     $dmrecord = $record.dmrecord
     Write-Debug "Building the SOAP for $dmrecord"
     $i++
-    Write-Progress -Activity "Sending Batch Edits to CONTENTdm Catcher" -Status "Sending dmrecord $($collection + "_" + $dmrecord)" -PercentComplete ($i / $metadata.count * 100)
+    Write-Progress -Activity "Batch Edit" -Status "Sending metadata edits to CONTENTdm Catcher" -CurrentOperation "Sending dmrecord $($collection + "_" + $dmrecord), $i of $($metadata.count)" -PercentComplete ($i / $metadata.count * 100)
     $SOAPRequest = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v6="http://catcherws.cdm.oclc.org/v6.0.0/">' + "`r`n"
     $SOAPRequest += "`t<soapenv:Header/>`r`n"
     $SOAPRequest += "`t<soapenv:Body>`r`n"
