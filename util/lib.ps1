@@ -249,6 +249,16 @@ function Split-Object-Metadata {
         }
     }
 
+    if ("Level" -in $SourceHeadersTrimmed) {
+        $csv | Select-Object * -ExcludeProperty "File Name" | Where-Object {$_.Level -eq "Item"} | Select-Object *, "File Name" -Exclude Level | Export-Csv -Delimiter `t -Path $path\itemMetadata.txt -NoTypeInformation
+
+        $csv | Where-Object {$_.Level -eq "Item"} | ForEach-Object { if (!(Test-Path $path\items)) { New-Item -ItemType Directory -Path $path\items | Out-Null } }
+    }
+
+
+
+
+
     # Export tab-d compound object metadata files, with object-level metadata.
     # Strip Directory and Level columns if present.
     # If File Name was included in the original metadata, make sure it's the last field.
@@ -256,7 +266,7 @@ function Split-Object-Metadata {
     $objects = $csv | Group-Object -AsHashTable -AsString -Property Directory
     ForEach ($object in $objects.keys) {
         if (!(Test-Path $path\$object)) { New-Item -ItemType Directory -Path $path\$object | Out-Null }
-        $objects.$object | Select-Object * -ExcludeProperty "File Name" | Select-Object *, "File Name" -ExcludeProperty Directory, Level | Export-Csv -Delimiter "`t" -Path $path\$object\$object.txt -NoTypeInformation
+        $objects.$object | Select-Object * -ExcludeProperty "File Name" | Select-Object *, "File Name" -ExcludeProperty Directory, Level | Export-Csv -Delimiter `t -Path $path\$object\$object.txt -NoTypeInformation
     }
     Write-Verbose "$(. Get-TimeStamp) Split-Object-Metadata complete"
 }
@@ -1075,6 +1085,9 @@ Workflow Convert-to-JP2 {
         $object,
 
         [Parameter()]
+        $items,
+
+        [Parameter()]
         [int16]
         $throttle,
 
@@ -1094,6 +1107,14 @@ Workflow Convert-to-JP2 {
     $files = Get-ChildItem *.tif* -Path $path\$object -Recurse
     $total = (Get-ChildItem *.tif* -Path $path\$object -Recurse).Count
     $i = 0
+
+    if ($object -in $items) {
+        $out = "$path\items"
+    } else {
+        $out = "$path\$object\scans"
+
+    }
+
     foreach -Parallel -Throttle $throttle ($file in $files) {
         $workflow:i++
         Write-Progress -Activity "Batch Create Compound objects" -Status "Converting $file to JP2" -PercentComplete ($i / $total * 100)
@@ -1103,8 +1124,8 @@ Workflow Convert-to-JP2 {
         Write-Verbose "Extracting color profile for $basefilename using GraphicsMagick"
         Invoke-Expression "$gm convert $fullfilename $sourceICC" 2>&1 | Tee-Object -file $log -Append
         Write-Verbose "Converting $basefilename to JP2 using souce color profile"
-        Write-Debug "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $path\$object\scans\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
-        Invoke-Expression "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $path\$object\scans\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
+        Write-Debug "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $out\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
+        Invoke-Expression "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $out\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
         Write-Verbose "Delete source color profile"
         Remove-Item $sourceICC
     }

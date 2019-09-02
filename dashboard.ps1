@@ -95,20 +95,20 @@ $Settings = New-UDPage -Name "Settings" -Content {
 
 $Batch = New-UDPage -Name "Batches" -Content {
     New-UDLayout -Columns 1 -Content {
-        New-UDInput -Title "Batch Create Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
+        New-UDInput -Title "Batch Create Items and Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\batch'
             New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue "metadata.csv"
-            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "2"
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "4"
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
             New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "extract", "skip") -DefaultValue "both"
             New-UDInputField -Type 'select' -Name 'ocrengine' -Placeholder "OCR Engine" -Values @("ABBYY", "tesseract") -DefaultValue "tesseract"
             New-UDInputField -Type 'select' -Name 'originals' -Placeholder @("Originals") -Values @("keep", "discard", "skip") -DefaultValue "keep"
         } -Endpoint {
             Param($path, $metadata, [int16]$throttle, $jp2, $ocr, $ocrengine, $originals)
-            $scriptblock = "$cdmt_root\batchCreateCompoundObjects.ps1 -path $path -metadata $metadata -throttle $throttle -jp2 $jp2 -ocr $ocr -ocrengine $ocrengine -originals $originals"
+            $scriptblock = "$cdmt_root\batchCreate.ps1 -path $path -metadata $metadata -throttle $throttle -jp2 $jp2 -ocr $ocr -ocrengine $ocrengine -originals $originals"
             Start-Process PowerShell.exe -ArgumentList "-NoExit -WindowStyle Maximized -ExecutionPolicy ByPass -Command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Batch Create Compound Objects" -Text "`nBatch creation has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`n
+                New-UDCard -Title "Batch Create Items and Compound Objects" -Text "`nBatch creation has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`n
                 You can also close the window at any time to halt the batch.`n
                 ------------------------------`n
                 Path:`t$path`n
@@ -155,7 +155,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
             New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
             New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
-            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "2"
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "4"
             New-UDInputField -Type 'select' -Name 'method' -Placeholder "Download Method" -Values @("API", "IIIF") -DefaultValue "API"
         } -Endpoint {
             Param($collection, $field, $public, $server, $license, $path, $user, $throttle, $method)
@@ -344,7 +344,7 @@ $Navigation = New-UDSideNav -Content {
     New-UDSideNavItem -Text "Settings" -PageName "Settings" -Icon sliders_h
     New-UDSideNavItem -Text "Batches" -PageName "Batches" -Icon play
     New-UDSideNavItem -Text "Documentation" -Children {
-        New-UDSideNavItem -Text "Batch Create" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchCreateCompoundObjects.md' -Icon plus_square
+        New-UDSideNavItem -Text "Batch Create" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchCreate.md' -Icon plus_square
         New-UDSideNavItem -Text "Batch Edit" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchEdit.md' -Icon edit
         New-UDSideNavItem -Text "Batch OCR" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchOCR.md' -Icon font
     }

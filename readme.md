@@ -28,9 +28,9 @@ PowerShell is a scripting language that has been included in all versions of Win
 
 ## Documentation
 Even if you are using the CONTENTdm Tools Dashboard, you will find the documentation, which is aimed more at command line usage, helpful. It provides details on the parameters and specific usage of each tool.
-  * [Batch create compound objects](docs/batchCreateCompoundObjects.md).
-  * [Batch edit objects and items](docs/batchEdit.md).
-  * [Batch OCR/Re-OCR a Collection](docs/batchOCR.md).
+  * [Batch create items and compound objects](docs/batchCreate.md).
+  * [Batch edit items and compound objects](docs/batchEdit.md).
+  * [Batch OCR (or Re-OCR) a Collection](docs/batchOCR.md).
 
 ## Security
 CONTENTdm Tools is designed primary to be used by a single person at their workstation. For convenience, it can store organizational settings and user credentials. It can store multiple user passwords, **anyone can use stored user passwords to send batch edits**. This isn't much of a concern when someone is using CONTENTdm Tools at their wokstation and haven't opened up PowerShell's web server to networks.
@@ -44,6 +44,7 @@ CONTENTdm Tools uses openly-licensed tools to process images and CONTENTdm servi
 * [GraphicsMagick](http://www.graphicsmagick.org/) -- "The swiss army knife of image processing", used here to convert TIF to JP2, while ensuring JP2 compliance and color management.
   * [ImageMagick](https://imagemagick.org/index.php) -- GraphicsMagick itself is based on an earlier project called ImageMagick.
 * [PDFtk Server](https://www.pdflabs.com/tools/pdftk-server/) -- PDFtk Server is an open-source PDF editing tool, used here to separte pages.
+* PowerShell 5.1
 * [Xpdf](https://www.xpdfreader.com/) -- Xpdf is an open-source PDF toolkit, used here to extract text.
 * [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) -- Tesseract is the leading open-source OCR package which is currently developed by Google, used here to convert TIF to TXT and generate searchable PDFs.
 * [Universal Dashboard](https://universaldashboard.io/) -- Universal Dashboard is an open-souce, cross-platform PowerShell module for developing and hosting web-based interactive dashboards, used here to provide the CONTENTdm Tools Dashboard GUI.

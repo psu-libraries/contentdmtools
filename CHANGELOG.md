@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file. The format 
   - Text can now be extracted from existing searchable PDFs if included in object folders rather than running OCR.
 - Verbose logging and help text added to scripts and functions. Progress indicators, where possible, for parallel actions.
 ### Changed
+- Batch Create now supports batch creating items as well as compound objects
 - Organizational settings and user credentials are now saved in a CSV and managed through dashboard GUI with CLI fallback. Passwords are stored as secure strings.
 - Normal field names can now be used for batch edits, CONTENTdm Tools will map field names to field nicknames automatically.
 - Batch OCR uses throttled downloads for collections with over 200 images to download.
