@@ -1,6 +1,8 @@
 # CONTENTdm Tools
 A set of PowerShell scripts for 64-bit, parallel, batch processing of digital content and metadata for CONTENTdm and for batch management of existing digital collections. For those who prefer one a web-based GUI is available.
 
+![CONTENTdm Tools Dashboard screenshot](docs/dashboardScreenshot.png)
+
 ## PowerShell Scripts
 PowerShell is a scripting language that has been included in all versions of Windows since Windows 7. To run Powershell scripts, you need to first run a command to allow them. To do this, you will need to open PowerShell with Administrative Privileges and run the following command: `Set-ExecutionPolicy Unrestricted`. If you are unable to run PowerShell with Administrative Privileges, you can run the following command to run scripts, but it will need to be run in every PowerShell session: `powershell.exe -ExecutionPolicy bypass`.
 
@@ -23,14 +25,14 @@ PowerShell is a scripting language that has been included in all versions of Win
       * `powershell.exe -ExecutionPolicy bypass ; .\setupNonAdmin.ps1`
 1. To start the dashboard, double click on the `startDashboard.bat` file. This will open a terminal window. Once text stops appearing on the screen, go to a browser and visit http://localhost:10000 to view the CONTENTdm Tools Dashboard. You do not need do bypass the `ExecutionPolicy` for the dashboard, it will automatically do so.
    * **Do not close the terminal window or it will kill the dashboard**. When you are done using CONTENTdm Tools, you can safely close the terminal window.
-   * When you start the dashboard for the first time, you will be prompted for Administrative Credentials to permit PowerShell to make a web server available networks. You can hit cancel and still use the dashboard on your workstation without Administrative Rights. If you wish other users to access the CONTENTdm Tools Dashboard running on your workstation, you can choose to open the PowerShell web server to Enterprise, Domain, Private, or Public networks. Talk to your IT first.
+   * When you start the dashboard for the first time, you will be prompted for Administrative Credentials to permit PowerShell to make a web server available networks. You can hit cancel and still use the dashboard on your workstation without Administrative Rights. If you wish other users to access the CONTENTdm Tools Dashboard running on your workstation, you can choose to open the PowerShell web server to Enterprise, Domain, Private, or Public networks. Please see the [security](#security) section below and talk to your IT department first.
 1. If you are not using the dashboard, you can run the scripts in a PowerShell window, in the CONTENTdm Tools root directory.
 
 ## Documentation
 Even if you are using the CONTENTdm Tools Dashboard, you will find the documentation, which is aimed more at command line usage, helpful. It provides details on the parameters and specific usage of each tool.
-  * [Batch create compound objects](docs/batchCreateCompoundObjects.md).
-  * [Batch edit objects and items](docs/batchEdit.md).
-  * [Batch OCR/Re-OCR a Collection](docs/batchOCR.md).
+  * [Batch create items and compound objects](docs/batchCreate.md).
+  * [Batch edit items and compound objects](docs/batchEdit.md).
+  * [Batch OCR (or Re-OCR) a Collection](docs/batchOCR.md).
 
 ## Security
 CONTENTdm Tools is designed primary to be used by a single person at their workstation. For convenience, it can store organizational settings and user credentials. It can store multiple user passwords, **anyone can use stored user passwords to send batch edits**. This isn't much of a concern when someone is using CONTENTdm Tools at their wokstation and haven't opened up PowerShell's web server to networks.
@@ -44,6 +46,7 @@ CONTENTdm Tools uses openly-licensed tools to process images and CONTENTdm servi
 * [GraphicsMagick](http://www.graphicsmagick.org/) -- "The swiss army knife of image processing", used here to convert TIF to JP2, while ensuring JP2 compliance and color management.
   * [ImageMagick](https://imagemagick.org/index.php) -- GraphicsMagick itself is based on an earlier project called ImageMagick.
 * [PDFtk Server](https://www.pdflabs.com/tools/pdftk-server/) -- PDFtk Server is an open-source PDF editing tool, used here to separte pages.
+* [PowerShell 5.1](https://docs.microsoft.com/en-us/skypeforbusiness/set-up-your-computer-for-windows-powershell/download-and-install-windows-powershell-5-1) -- PowerShell is the language used for CONTENTdm Tools. At the moment, some of the parallel processing requires a version of PowerShell that only works on Windows. Future versions of PowerShell will suport these features on all platforms, allowing CONTENTdm Tools, with some slight modifications, to be fully cross-platform.
 * [Xpdf](https://www.xpdfreader.com/) -- Xpdf is an open-source PDF toolkit, used here to extract text.
 * [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) -- Tesseract is the leading open-source OCR package which is currently developed by Google, used here to convert TIF to TXT and generate searchable PDFs.
 * [Universal Dashboard](https://universaldashboard.io/) -- Universal Dashboard is an open-souce, cross-platform PowerShell module for developing and hosting web-based interactive dashboards, used here to provide the CONTENTdm Tools Dashboard GUI.

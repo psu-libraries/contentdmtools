@@ -17,14 +17,16 @@ A temporary subdirectory will be created in your CONTENTdm Tools directory where
 ## Usage
 1. Open a PowerShell window and navigate to your CONTENTdm Tools root directory.
 2. Enter the following command to begin: `.\batchOCR.ps1 -collection collectionAlias -field transcriptFieldNickname -path "C:\path\to\staging" -public https://urlToPublicCONTENTDM.edu -server https://urlToAdministrativeServer.edu`
-     * `-path` -- Path to a directory to stage tempory files generated during OCR process. Should have ample free disk space! (Defaults to CONTENTdm Tools subdirectory if left out.)
-     * `-collection` -- Collection alias for the CONTENTdm collection you wish to re-OCR. REQUIRED
-     * `-field` -- Collection field configured with the data type `Full Text Search`. REQUIRED
-     * `-user` -- Username for a CONTENTdm user. REQUIRED
-     * `-throttle` specifies the number of CPU cores to use for parallel processing (image downloading and OCR).
-     * `-public` -- URL to the Public UI CONTENTdm website. (Defaults to stored settings is left out.)
-     * `-server` -- URL to the Administrative UI. This may include a port number for self-hosted instances. (Defaults to stored settings is left out.)
-     * `-license` -- CONTENTdm License. (Defaults to stored settings is left out.)
-3. Depending on the size of the collection, this could take a long time to run. You can watch the terminal output as it progresses or review the log afterwards. It will end with a (very) brief report on the results.
+    - `-collection` -- Collection alias for the CONTENTdm collection you wish to re-OCR. REQUIRED
+    - `-field` -- Collection field configured with the data type `Full Text Search`. REQUIRED
+    - `-public` -- URL to the Public UI CONTENTdm website. (Defaults to stored settings is left out.)
+    - `-server` -- URL to the Administrative UI. This may include a port number for self-hosted instances. (Defaults to stored settings is left out.)
+    - `-license` -- CONTENTdm License. (Defaults to stored settings is left out.)
+    - `-path` -- Path to a directory to stage tempory files generated during OCR process. Should have ample free disk space! (Defaults to CONTENTdm Tools subdirectory if left out.)
+    - `-user` -- Username for a CONTENTdm user. REQUIRED
+    - `-throttle` -- The number of CPU cores to use for parallel processing (image downloading when over 200 and OCR). (DEFAULT VALUE = 4)
+    - `-method` -- The image download method, CONTENTdm API or IIIF Image API. Note: IIIF does not support monograph compound objects. (DEFAULT VALUE = API)
+    - `-verbose` -- Optional parameter to increase logging output.
+3. Depending on the size of the collection, this could take a long time to run. You can watch the terminal output as it progresses or review the log afterwards. A breif QC report will display at the end of processing.
 4. Log into the Administrative UI and index the collection to complete the process. Approving is not necessary for items uploaded through CONTENTdm Catcher.
 5. After indexing, be sure to return field properties back to their original setting, if needed.

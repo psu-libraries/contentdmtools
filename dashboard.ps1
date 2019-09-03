@@ -95,20 +95,31 @@ $Settings = New-UDPage -Name "Settings" -Content {
 
 $Batch = New-UDPage -Name "Batches" -Content {
     New-UDLayout -Columns 1 -Content {
-        New-UDInput -Title "Batch Create Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
+        New-UDInput -Title "Batch Create Items and Compound Objects" -Id "createBatch" -SubmitText "Start" -Content {
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\batch'
             New-UDInputField -Type 'textbox' -Name 'metadata' -Placeholder 'metadata.csv' -DefaultValue "metadata.csv"
-            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "4"
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
             New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "extract", "skip") -DefaultValue "both"
+            New-UDInputField -Type 'select' -Name 'ocrengine' -Placeholder "OCR Engine" -Values @("ABBYY", "tesseract") -DefaultValue "tesseract"
             New-UDInputField -Type 'select' -Name 'originals' -Placeholder @("Originals") -Values @("keep", "discard", "skip") -DefaultValue "keep"
         } -Endpoint {
-            Param($path, $metadata, [int16]$throttle, $jp2, $ocr, $originals)
-            $scriptblock = "$cdmt_root\batchCreateCompoundObjects.ps1 -path $path -metadata $metadata -throttle $throttle -jp2 $jp2 -ocr $ocr -originals $originals"
-            Start-Process PowerShell.exe -ArgumentList "-noexit -command $scriptblock"
+            Param($path, $metadata, [int16]$throttle, $jp2, $ocr, $ocrengine, $originals)
+            $scriptblock = "$cdmt_root\batchCreate.ps1 -path $path -metadata $metadata -throttle $throttle -jp2 $jp2 -ocr $ocr -ocrengine $ocrengine -originals $originals"
+            Start-Process PowerShell.exe -ArgumentList "-NoExit -WindowStyle Maximized -ExecutionPolicy ByPass -Command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Batch Create Compound Objects" -Text "Batch creation has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch.
-                `r`n------------------------------`r`nPath:`t`t$path`r`nMetadata:`t`t$csv`r`nJP2s:`t`t$jp2`r`nOCR:`t`t$ocr`r`nOriginals:`t`t$originals`r`nThrottle:`t`t$throttle`r`n------------------------------`r`nBatch Start Time:`t`t$(Get-Date)"
+                New-UDCard -Title "Batch Create Items and Compound Objects" -Text "`nBatch creation has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`n
+                You can also close the window at any time to halt the batch.`n
+                ------------------------------`n
+                Path:`t$path`n
+                Metadata:`t$metadata`n
+                Throttle:`t$throttle`n
+                JP2s:`t$jp2`n
+                OCR:`t$ocr`n
+                OCR Engine:`t$ocrengine`n
+                Originals:`t$originals`n
+                ------------------------------`n
+                Batch Start Time:`t$(Get-Date -Format u)"
             )
         }
 
@@ -121,10 +132,18 @@ $Batch = New-UDPage -Name "Batches" -Content {
         } -Endpoint {
             Param($collection, $server, $license, $metadata, $user)
             $scriptblock = "$cdmt_root\batchEdit.ps1 -collection $collection -server $server -license $license -csv $metadata  -user $user"
-            Start-Process PowerShell.exe -ArgumentList "-noexit -command $scriptblock"
+            Start-Process PowerShell.exe -ArgumentList "-NoExit -WindowStyle Maximized -ExecutionPolicy ByPass -Command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Batch Edit Metadata" -Text "Batch edit has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch.
-                `r`n------------------------------`r`nCollection:`t`t$collection`r`nServer:`t`t$server`r`nLicense:`t`t$license`r`nMetadata:`t`t$metdata`r`n`User:`t`t$user`r`n------------------------------`r`nBatch Start Time`t`t$(Get-Date)"
+                New-UDCard -Title "Batch Edit Metadata" -Text "`rBatch edit has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`n
+                You can also close the window at any time to halt the batch.`n
+                ------------------------------`n
+                Collection:`t$collection`n
+                Server:`t$server`n
+                License:`t$license`n
+                Metadata:`t$metadata`n`
+                User:`t$user`n
+                ------------------------------`n
+                Batch Start Time`t$(Get-Date -Format u)"
             )
         }
 
@@ -136,20 +155,161 @@ $Batch = New-UDPage -Name "Batches" -Content {
             New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
             New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
             New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
-            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1","2","4","6","8") -DefaultValue "2"
-            #New-UDInputField -Type 'select' -Name 'method' -Placeholder "Download Method" -Values @("API", "IIIF") -DefaultValue "API"
+            New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "4"
+            New-UDInputField -Type 'select' -Name 'method' -Placeholder "Download Method" -Values @("API", "IIIF") -DefaultValue "API"
         } -Endpoint {
             Param($collection, $field, $public, $server, $license, $path, $user, $throttle, $method)
-            $scriptblock = "$cdmt_root\batchOCR.ps1 -collection $collection -field $field -public $public -server $server -license $license -path $path -user $user -throttle $throttle" #-method $method"
-            Start-Process PowerShell.exe -ArgumentList "-noexit -command $scriptblock"
+            $scriptblock = "$cdmt_root\batchOCR.ps1 -collection $collection -field $field -public $public -server $server -license $license -path $path -user $user -throttle $throttle -method $method"
+            Start-Process PowerShell.exe -ArgumentList "-NoExit -WindowStyle Maximized -ExecutionPolicy ByPass -Command $scriptblock"
             New-UDInputAction -Content @(
-                New-UDCard -Title "Batch OCR a Collection" -Text "Batch OCR has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`nYou can also close the window at any time to halt the batch. `r`n------------------------------`r`nCollection:`t`t$collection`r`nField:`t`t$field`r`nPublic:`t`t$public`r`nServer:`t`t$server`r`nLicense:`t`t$license`r`nUser:`t`t$user`r`nPath:`t`t$path`r`nThrottle:`t`t$throttle`r`n------------------------------`r`nBatch Start Time:`t`t$(Get-Date)"
+                New-UDCard -Title "Batch OCR a Collection" -Text "`nBatch OCR has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`n
+                You can also close the window at any time to halt the batch.`n
+                ------------------------------`n
+                Collection:`t`t$collection`n
+                Field:`t`t$field`n
+                Public:`t`t$public`n
+                Server:`t`t$server`n
+                License:`t`t$license`n
+                Path:`t`t$path`n
+                User:`t`t$user`n
+                Throttle:`t`t$throttle`n
+                Method:`t`t$method`n
+                ------------------------------`n
+                Batch Start Time:`t`t$(Get-Date -Format u)"
             )
         }
     }
 
+    New-UDLayout -Columns 3 -Content {
+        New-UDInput -Title "Export Collection Metadata" -Id "exportCollectionMetadata" -SubmitText "Export" -Content {
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+            New-UDInputField -Type 'textarea' -Name 'path' -Placeholder 'C:\path\to\staging'
+            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
+        } -Endpoint {
+            Param($user, $server, $collection, $path)
+            Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
+            if (Test-Path $cdmt_root\settings\user.csv) {
+                $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+                $usrcsv = Import-Csv $usrcsv
+                $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
+                    $SecurePassword = $_.password | ConvertTo-SecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+                if ("$user" -notin $usrcsv.user) {
+                    Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
+                    [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+            }
+            Else {
+                Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
+                [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                $null = $BSTR
+            }
+            $pair = "$($user):$($pw)"
+            $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+            $basicAuthValue = "Basic $encodedCreds"
+            $Headers = @{
+                Authorization = $basicAuthValue
+            }
+            Invoke-WebRequest "$server/cgi-bin/admin/export.exe?CISODB=/$collection&CISOOP=ascii&CISOMODE=1&CISOPTRLIST=" -Headers $Headers | Out-Null
+            Invoke-RestMethod "$server/cgi-bin/admin/getfile.exe?CISOMODE=1&CISOFILE=/$collection/index/description/export.txt" -Headers $Headers -OutFile "$path\$collection.txt"
+            New-UDInputAction -Toast "Collection metadata exported to $path\$collection.txt." -Duration 5000
+        }
+
+        New-UDInput -Title "Unlock Collection Metadata" -Id "unlockCollectionMetadata" -SubmitText "Unlock" -Content {
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
+        } -Endpoint {
+            Param($user, $server, $collection)
+            Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
+            if (Test-Path $cdmt_root\settings\user.csv) {
+                $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+                $usrcsv = Import-Csv $usrcsv
+                $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
+                    $SecurePassword = $_.password | ConvertTo-SecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+                if ("$user" -notin $usrcsv.user) {
+                    Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
+                    [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+            }
+            Else {
+                Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
+                [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                $null = $BSTR
+            }
+            $pair = "$($user):$($pw)"
+            $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+            $basicAuthValue = "Basic $encodedCreds"
+            $Headers = @{
+                Authorization = $basicAuthValue
+            }
+            Invoke-WebRequest "$server/cgi-bin/admin/unlocksubset.exe?CISODB=/$collection&CISOPTRLIST=all&CISOMODE=1" -Headers $Headers | Out-Null
+            New-UDInputAction -Toast "$collection metadata unlocked." -Duration 5000
+        }
+
+        New-UDInput -Title "Index Collection Metadata" -Id "indexCollectionMetadata" -SubmitText "Index" -Content {
+            New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
+            New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
+            New-UDInputField -Type 'textbox' -Name 'user' -Placeholder 'CONTENTdm Username'
+        } -Endpoint {
+            Param($user, $server, $collection)
+            Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
+            if (Test-Path $cdmt_root\settings\user.csv) {
+                $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+                $usrcsv = Import-Csv $usrcsv
+                $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
+                    $SecurePassword = $_.password | ConvertTo-SecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+                if ("$user" -notin $usrcsv.user) {
+                    Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
+                    [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $null = $BSTR
+                }
+            }
+            Else {
+                Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
+                [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
+                $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                $null = $BSTR
+            }
+            $pair = "$($user):$($pw)"
+            $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+            $basicAuthValue = "Basic $encodedCreds"
+            $Headers = @{
+                Authorization = $basicAuthValue
+            }
+            Invoke-WebRequest "$server/cgi-bin/admin/putsched.exe?CISODB=/$collection&CISOOP=index&CISOTYPE1=now" -Headers $Headers | Out-Null
+            New-UDInputAction -Toast "$collection is currently indexing." -Duration 5000
+            New-UDLink -Text "CONTENTdm Admin UI" -Url "$server/cgi-bin/admin/bld.exe?CISODB=/$collection"
+        }
+    }
+
     New-UDLayout -Columns 2 -Content {
-        New-UDInput -Title "Published Collection Alias Look Up" -Id "getCollections" -SubmitText "Submit" -Content {
+        New-UDInput -Title "Collection Alias Look Up" -Id "getCollections" -SubmitText "Look Up" -Content {
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
         } -Endpoint {
             Param($server)
@@ -158,8 +318,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
                 New-UDGrid -Title "Published Collection Alias'" -Headers @("Name", "Alias") -Properties @("name", "secondary_alias") -Endpoint { $data | Out-UDGridData }
             )
         }
-
-        New-UDInput -Title "Collection Field Properties Look Up" -Id "getCollProp" -SubmitText "Submit" -Content {
+        New-UDInput -Title "Collection Field Properties Look Up" -Id "getCollProp" -SubmitText "Look Up" -Content {
             New-UDInputField -Type 'textbox' -Name 'collection' -Placeholder 'Collection Alias'
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'URL for Admin UI' -DefaultValue $Global:cdmt_server
         } -Endpoint {
@@ -169,6 +328,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
                 New-UDGrid -Title "Collection Field Properties: $collection" -Headers @("Name", "Nickname", "Data Type", "Large", "Searchable", "Hidden", "Admin", "Required", "Controlled Vocab") -Properties @("name", "nick", "type", "size", "search", "hide", "admin", "req", "vocab") -Endpoint { $data | Out-UDGridData }
             )
         }
+
     }
 }
 
@@ -184,9 +344,9 @@ $Navigation = New-UDSideNav -Content {
     New-UDSideNavItem -Text "Settings" -PageName "Settings" -Icon sliders_h
     New-UDSideNavItem -Text "Batches" -PageName "Batches" -Icon play
     New-UDSideNavItem -Text "Documentation" -Children {
-        New-UDSideNavItem -Text "Batch Create" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchCreateCompoundObjects.md' -Icon plus_square
+        New-UDSideNavItem -Text "Batch Create" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchCreate.md' -Icon plus_square
         New-UDSideNavItem -Text "Batch Edit" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchEdit.md' -Icon edit
-        New-UDSideNavItem -Text "Batch Re-OCR" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchOCR.md' -Icon font
+        New-UDSideNavItem -Text "Batch OCR" -Url 'https://github.com/psu-libraries/contentdmtools/blob/community/docs/batchOCR.md' -Icon font
     }
 }
 
@@ -205,4 +365,4 @@ $theme = New-UDTheme -Name "cdm-tools" -Definition @{
 
 Start-UDDashboard -Content {
     New-UDDashboard -Title "CONTENTdm Tools Dashboard" -Navigation $Navigation -NavbarLinks $NavBarLinks -Theme $theme -Pages @($HomePage, $Batch, $Settings)
-} -Port 1000 -Name 'cdm-tools' -AutoReload
+} -Port 1000 -Name 'cdm-tools' #-AutoReload
