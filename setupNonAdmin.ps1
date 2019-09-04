@@ -22,7 +22,7 @@ If (!(Get-Module -ListAvailable -Name "NuGet")) {
 
 # Update the PowershellGet module.
 If (((get-module -listAvailable -Name "PowershellGet").version.major) -lt 2 ) {
-    Install-PackageProvider NuGet -Force -Scope CurrentUser | Tee-Object -FilePath $log -Append
+    Install-Module PowershellGet -Force -Scope CurrentUser | Tee-Object -FilePath $log -Append
 }
 
 Write-Output "Please close this PowerShell windows and run this setup script again. After installing the last dependency, the session needs to be restarted before proceeding. If this is the second time you have seen this message, press any key to continue." | Tee-Object -FilePath $log -Append
