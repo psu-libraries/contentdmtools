@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 ### Added
+### Changed
+### Removed
+## [CONTENTdm Tools 2.0](https://github.com/psu-libraries/contentdmtools/releases/tag/v2.0) - 2019-09-04
+### Added
 - Settings page added to the dashboard.
   - Organizational settings to be saved and cached (requires restart).
   - Multiple user passwords can be saved, when a username is passed as a parameter, it will look up stored credentials.
@@ -32,7 +36,7 @@ All notable changes to this project will be documented in this file. The format 
 - Batches from the dashboard now start in PowerShell window using `-ExecutionPolicy Bypass`.
 ### Removed
 
-## [1.0.0](https://github.com/psu-libraries/contentdmtools/releases/tag/v1.0) - 2019-08-06
+## [CONTENTdm Tools 1.0](https://github.com/psu-libraries/contentdmtools/releases/tag/v1.0) - 2019-08-06
 ### Added
 - Batch create compound objects from TIF images, including OCR text and searchable PDFs, with full compound-object tab-d metadata in directory structure.
 - Batch OCR/Re-OCR a collection.
@@ -46,6 +50,6 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Removed
 
-[Unreleased]: https://github.com/psu-libraries/contentdmtools/compare/v1.0...HEAD
-[1.0.0]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.3.0...v1.0.0
+[Unreleased]: https://github.com/psu-libraries/contentdmtools/compare/community...HEAD
+[2.0.0]: https://github.com/psu-libraries/contentdmtools/compare/v1.0...v2.0
 [1.0.0]: https://github.com/psu-libraries/contentdmtools/releases/tag/v1.0
