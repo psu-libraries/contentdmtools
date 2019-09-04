@@ -1,5 +1,5 @@
 # CONTENTdm Tools
-A set of PowerShell scripts for 64-bit, parallel, batch processing of digital content and metadata for CONTENTdm and for batch management of existing digital collections. For those who prefer one a web-based GUI is available.
+CONTENTdm Tools is an open-source set of PowerShell scripts and a web-based Dashboard for 64-bit, parallel, batch processing of digital content and metadata to aid in the creation and management of CONTENTdm digital collections. 
 
 ![CONTENTdm Tools Dashboard screenshot](docs/dashboardScreenshot.png)
 
