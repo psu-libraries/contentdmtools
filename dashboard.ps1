@@ -101,7 +101,7 @@ $Batch = New-UDPage -Name "Batches" -Content {
             New-UDInputField -Type 'select' -Name 'throttle' -Placeholder "Throttle" -Values @("1", "2", "4", "6", "8") -DefaultValue "4"
             New-UDInputField -Type 'select' -Name 'jp2' -Placeholder "JP2 Output" -Values @("true", "false", "skip") -DefaultValue "true"
             New-UDInputField -Type 'select' -Name 'ocr' -Placeholder "OCR Output" -Values @("text", "pdf", "both", "extract", "skip") -DefaultValue "both"
-            #New-UDInputField -Type 'select' -Name 'ocrengine' -Placeholder "OCR Engine" -Values @("ABBYY", "tesseract") -DefaultValue "tesseract"
+            New-UDInputField -Type 'select' -Name 'ocrengine' -Placeholder "OCR Engine" -Values @("ABBYY", "tesseract") -DefaultValue "tesseract"
             New-UDInputField -Type 'select' -Name 'originals' -Placeholder @("Originals") -Values @("keep", "discard", "skip") -DefaultValue "keep"
         } -Endpoint {
             Param($path, $metadata, [int16]$throttle, $jp2, $ocr, $originals)
