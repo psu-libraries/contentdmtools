@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 ### Added
+### Changed
+### Removed
+## [CONTENTdm Tools 2.1](https://github.com/psu-libraries/contentdmtools/releases/tag/v2.1) - 2019-09-04
+### Changed
+- Fixed bug in setupNonAdmin.ps1
+- Updated readme.
+
+## [CONTENTdm Tools 2.0](https://github.com/psu-libraries/contentdmtools/releases/tag/v2.0) - 2019-09-04
+### Added
 - Settings page added to the dashboard.
   - Organizational settings to be saved and cached (requires restart).
   - Multiple user passwords can be saved, when a username is passed as a parameter, it will look up stored credentials.
@@ -30,9 +39,8 @@ All notable changes to this project will be documented in this file. The format 
 - Metadata processing will now automatically add `File Name` field if not included and make sure it's the last column if it's included.
 - Improved error handling and QC reporting.
 - Batches from the dashboard now start in PowerShell window using `-ExecutionPolicy Bypass`.
-### Removed
 
-## [1.0.0](https://github.com/psu-libraries/contentdmtools/releases/tag/v1.0) - 2019-08-06
+## [CONTENTdm Tools 1.0](https://github.com/psu-libraries/contentdmtools/releases/tag/v1.0) - 2019-08-06
 ### Added
 - Batch create compound objects from TIF images, including OCR text and searchable PDFs, with full compound-object tab-d metadata in directory structure.
 - Batch OCR/Re-OCR a collection.
@@ -42,10 +50,8 @@ All notable changes to this project will be documented in this file. The format 
 - Individual user credential management via CLI.
 - Documentation.
 
-### Changed
-
-### Removed
-
-[Unreleased]: https://github.com/psu-libraries/contentdmtools/compare/v1.0...HEAD
-[1.0.0]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.3.0...v1.0.0
-[1.0.0]: https://github.com/psu-libraries/contentdmtools/releases/tag/v1.0
+## Code Changes
+- Unreleased: https://github.com/psu-libraries/contentdmtools/compare/community...HEAD
+- 2.1: https://github.com/psu-libraries/contentdmtools/compare/v2.0...v2.1
+- 2.0: https://github.com/psu-libraries/contentdmtools/compare/v1.0...v2.0
+- 1.0: https://github.com/psu-libraries/contentdmtools/releases/tag/v1.0
