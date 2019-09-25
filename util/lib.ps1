@@ -10,7 +10,7 @@ function Get-TimeStamp {
     return (Get-Date -Format u)
 }
 function Get-Org-Settings {
-  <#
+    <#
 	    .SYNOPSIS
         Retrieve cached organization settings.
 	    .DESCRIPTION
@@ -43,7 +43,7 @@ function Get-Org-Settings {
 }
 
 function Get-User-Settings {
-        <#
+    <#
 	    .SYNOPSIS
         Retrieve cached user credentials.
 	    .DESCRIPTION
@@ -94,7 +94,7 @@ function Get-User-Settings {
 
 #SOAP functions # https://ponderingthought.com/2010/01/17/execute-a-soap-request-from-powershell/
 function Send-SOAPRequest {
-<#
+    <#
 	    .SYNOPSIS
         Send SOAP XML to SOAP API Endpoint.
 	    .DESCRIPTION
@@ -250,9 +250,9 @@ function Split-Object-Metadata {
     }
 
     if ("Level" -in $SourceHeadersTrimmed) {
-        $csv | Select-Object * -ExcludeProperty "File Name" | Where-Object {$_.Level -eq "Item"} | Select-Object *, "File Name" -Exclude Level | Export-Csv -Delimiter `t -Path $path\itemMetadata.txt -NoTypeInformation
+        $csv | Select-Object * -ExcludeProperty "File Name" | Where-Object { $_.Level -eq "Item" } | Select-Object *, "File Name" -Exclude Level | Export-Csv -Delimiter `t -Path $path\itemMetadata.txt -NoTypeInformation
 
-        $csv | Where-Object {$_.Level -eq "Item"} | ForEach-Object { if (!(Test-Path $path\items)) { New-Item -ItemType Directory -Path $path\items | Out-Null } }
+        $csv | Where-Object { $_.Level -eq "Item" } | ForEach-Object { if (!(Test-Path $path\items)) { New-Item -ItemType Directory -Path $path\items | Out-Null } }
     }
 
 
@@ -510,18 +510,13 @@ function Merge-PDF-PDFTK {
 
         [Parameter()]
         [string]
-        $log,
-
-        [Parameter()]
-        [string]
         $pdftk
     )
     Write-Verbose "$(. Get-TimeStamp) Merge-PDF-PDFTK starting for $object"
     # $pdftk *.pdf cat output file.pdf
     Write-Verbose "Generate a list of PDF files from the transcripts subdirectory and merge them using pdftk."
     $list = (Get-ChildItem -Path $path\$object\transcripts *.pdf).FullName
-    Invoke-Expression "$pdftk $list cat output $path\$object.pdf" | Tee-Object -file $log -Append
-    # need to delete the individual pages...
+    Invoke-Expression "$pdftk $list cat output $path\$object.pdf"
     Write-Verbose "$(. Get-TimeStamp) Merge-PDF-PDFTK complete for $object"
 }
 function Get-Images-List {
@@ -665,7 +660,6 @@ function Get-Object-Pages {
     }
 }
 
-
 function Convert-to-Text-And-PDF-ABBYY {
     <#
 	    .SYNOPSIS
@@ -678,8 +672,6 @@ function Convert-to-Text-And-PDF-ABBYY {
         The name of the object subdirectory in the batch of objects, usually the object identifier.
         .PARAMETER throttle
         Integer for the number of CPU processes when copying TIFs to the ABBYY server.
-        .PARAMETER log
-        The filepath or variable of a log to send console output.
         .EXAMPLE
 
 	    .INPUTS
@@ -703,32 +695,38 @@ function Convert-to-Text-And-PDF-ABBYY {
 
         [Parameter()]
         [string]
-        $log,
-
-        [Parameter()]
-        [string]
         $pdftk
     )
     Write-Verbose "$(. Get-TimeStamp) Convert-to-Text-And-PDF-ABBYY starting for $object"
-    $abbyy_staging = O:\pcd\cho-cdm\staging
-    $abbyy_both_in = O:\pcd\cho-cdm\input
-    $abbyy_both_out = O:\pcd\cho-cdm\output
+    $abbyy_staging = "O:\pcd\cho-cdm\staging"
+    $abbyy_both_in = "O:\pcd\cho-cdm\input"
+    $abbyy_both_out = "O:\pcd\cho-cdm\output"
     $tifs = (Get-ChildItem *.tif* -Path $path\$object -Recurse).count
-    $txts = (Get-ChildItem *.txt -Path $abbyy_text_out\$object -Recurse).count
     New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null
-    . Copy-Tif -path $path -object $object -throttle $throttle -abbyy_staging $abbyy_staging -log $log 2>&1 | Tee-Object -file $log -Append
-    Write-Verbose "Move copy of object TIFs from ABBYY staging to ABBYY in directory."
-    Move-Item $abbyy_staging\$object $abbyy_both_in 2>&1 | Tee-Object -file $log -Append
-    Write-Verbose "Sleep script until there is in TXT for every TIF"
-    while ($tifs -ne $txts) { Start-Sleep -Seconds 15 }
+    $(. Copy-TIF-ABBYY -path $path -object $object -throttle $throttle -abbyy_staging $abbyy_staging  2>&1)
+    Write-Verbose "$(. Get-TimeStamp) Move copy of object TIFs from ABBYY staging to ABBYY in directory."
+    Move-Item $abbyy_staging\$object $abbyy_both_in 2>&1
+    Write-Verbose "$(. Get-TimeStamp) Sleep script until there is in TXT for every TIF"
+    Write-Progress -Activity "Convert to Text and PDF, ABBYY" -CurrentOperation "0/$tifs Complete" -Status "Running OCR on Images" -PercentComplete (0 / $tifs * 100)
+    Do {
+        Start-Sleep -Seconds 5
+        $txts = (Get-ChildItem *.txt -Path $abbyy_both_out\$object -Recurse).count
+        Write-Progress -Activity "Convert to Text and PDF, ABBYY" -CurrentOperation "$txts/$tifs Complete" -Status "Running OCR on Images" -PercentComplete ($txts / $tifs * 100)
+    } While ($tifs -ne $txts)
+    Write-Verbose "$(. Get-TimeStamp) Move PDF and TXT files to transcripts subdirectory."
     Get-ChildItem * -Path $abbyy_both_out\$object | ForEach-Object {
-        Move-Item -Path $_ -Destination $path\$object\transcripts  2>&1 | Tee-Object -file $log -Append
+        Move-Item -Path $_.FullName -Destination $path\$object\transcripts 2>&1
     }
-    . Merge-PDF-PDFTK -path $path -object $object -log $log -pdftk $pdftk 2>&1 | Tee-Object -file $log -Append
-    Write-Verbose "Move object PDF from transcripts subdirectory to object directory."
-    Move-Item $path\$object\transcripts\$object.pdf $path\$object\$object.pdf 2>&1 | Tee-Object -file $log -Append
-    Write-Verbose "Delete the object directory in ABBYY out directory."
-    Remove-Item $abbyy_both_out\$object 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "$(. Get-TimeStamp) Merge PDFs into single object PDF"
+    $(. Merge-PDF-PDFTK -path $path -object $object -pdftk $pdftk 2>&1)
+    Write-Verbose "$(. Get-TimeStamp) Move object PDF from transcripts subdirectory to object directory."
+    Get-ChildItem *.pdf -Path $path\$object\transcripts | ForEach-Object {
+        Remove-Item $_.FullName | Out-Null
+    }
+    Write-Verbose "$(. Get-TimeStamp) Move object PDF to root of object directory."
+    Move-Item $path\$object.pdf $path\$object\$object.pdf 2>&1
+    Write-Verbose "$(. Get-TimeStamp) Delete the object directory in ABBYY out directory."
+    Remove-Item $abbyy_both_out\$object 2>&1 
     Write-Verbose "$(. Get-TimeStamp) Convert-to-Text-And-PDF-ABBYY complete for $object"
 }
 
@@ -747,7 +745,7 @@ function Convert-to-Text-ABBYY {
         .PARAMETER log
         The filepath or variable of a log to send console output.
         .EXAMPLE
-
+        Convert-to-Text-ABBYY -path Q:\batch\ -object pst_28983983 -throttle 6 -log logFile.txt
 	    .INPUTS
         System.String
         System.Integer
@@ -773,21 +771,27 @@ function Convert-to-Text-ABBYY {
         $log
     )
     Write-Verbose "$(. Get-TimeStamp) Convert-to-Text-ABBYY starting for $object"
-    $abbyy_staging = O:\pcd\text\staging
-    $abbyy_text_in = O:\pcd\text\input
-    $abbyy_text_out = O:\pcd\text\output
+    $abbyy_staging = "O:\pcd\text\staging"
+    $abbyy_text_in = "O:\pcd\text\input"
+    $abbyy_text_out = "O:\pcd\text\output"
     $tifs = (Get-ChildItem *.tif* -Path $path\$object -Recurse).count
-    $txts = (Get-ChildItem *.txt -Path $abbyy_text_out\$object -Recurse).count
     New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null
+    Write-Verbose "$(. Get-TimeStamp)  Copy TIF images to ABBYY server."
     . Copy-TIF-ABBYY -path $path -object $object -throttle $throttle -abbyy_staging $abbyy_staging -log $log 2>&1 | Tee-Object -file $log -Append
-    Write-Verbose "Move copy of object TIFs from ABBYY staging to ABBYY in directory."
+    Write-Verbose "$(. Get-TimeStamp) Move TIFs from ABBYY staging to ABBYY in directory."
     Move-Item -Path $abbyy_staging\$object -Destination $abbyy_text_in 2>&1 | Tee-Object -file $log -Append
-    Write-Verbose "Sleep script until there is in TXT for every TIF"
-    while ($tifs -ne $txts) { Start-Sleep -Seconds 15 }
+    Write-Verbose "$(. Get-TimeStamp) Sleep script until there is in TXT for every TIF"
+    Write-Progress -Activity "Convert to Text ABBYY" -CurrentOperation "0/$tifs Complete" -Status "Running OCR on Images" -PercentComplete (0 / $tifs * 100)
+    Do {
+        Start-Sleep -Seconds 5
+        $txts = (Get-ChildItem *.txt -Path $abbyy_text_out\$object -Recurse).count
+        Write-Progress -Activity "Convert to Text ABBYY" -CurrentOperation "$txts/$tifs Complete" -Status "Running OCR on Images" -PercentComplete ($txts / $tifs * 100)
+    } While ($tifs -ne $txts)
+    Write-Verbose "$(. Get-TimeStamp) Move TXT files to transcripts subdirectory" 
     Get-ChildItem *.txt -Path $abbyy_text_out\$object | ForEach-Object {
-        Move-Item -Path $_ -Destination $path\$object\transcripts  2>&1 | Tee-Object -file $log -Append
+        Move-Item -Path $_.FullName -Destination $path\$object\transcripts  2>&1 | Tee-Object -file $log -Append
     }
-    Write-Verbose "Delete the object directory in ABBYY out directory."
+    Write-Verbose "$(. Get-TimeStamp) Delete the object directory in ABBYY out directory."
     Remove-Item $abbyy_text_out\$object 2>&1 | Tee-Object -file $log -Append
     Write-Verbose "$(. Get-TimeStamp) Convert-to-Text-ABBYY complete for $object"
 }
@@ -804,10 +808,8 @@ function Convert-to-PDF-ABBYY {
         The name of the object subdirectory in the batch of objects, usually the object identifier.
         .PARAMETER throttle
         Integer for the number of CPU processes when copying TIFs to the ABBYY server.
-        .PARAMETER log
-        The filepath or variable of a log to send console output.
         .EXAMPLE
-
+        Convert-to-Text-And-PDF-ABBYY -path C:\batch -object pstsc_12093_43423424234234 -pdftk G:\xpdf\pdftotext.exe
 	    .INPUTS
         System.String
         System.Integer
@@ -833,21 +835,22 @@ function Convert-to-PDF-ABBYY {
         $log
     )
     Write-Verbose "$(. Get-TimeStamp) Convert-to-PDF-ABBYY starting for $object"
-    $abbyy_staging = O:\pcd\many2pdf-high\staging
-    $abbyy_pdf_in = O:\pcd\many2pdf-high\input
-    $abbyy_pdf_out = O:\pcd\many2pdf-high\output
-    $pdf = ($abbyy_pdf_out + "\" + $object + ".pdf")
-    $txt = ($abbyy_pdf_out + "\" + $object + ".txt")
+    $abbyy_staging = "O:\pcd\many2pdf\staging"
+    $abbyy_pdf_in = "O:\pcd\many2pdf\input"
+    $abbyy_pdf_out = "O:\pcd\many2pdf\output"
+    $pdf = "$abbyy_pdf_out\$object\$object.pdf"
     New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null
+    Write-Verbose "$(. Get-TimeStamp) Copy TIF images to ABBYY server."
     . Copy-TIF-ABBYY -path $path -object $object -throttle $throttle -abbyy_staging $abbyy_staging -log $log 2>&1 | Tee-Object -file $log -Append
     Write-Verbose "Move copy of object TIFs from ABBYY staging to ABBYY in directory."
     Move-Item $abbyy_staging\$object $abbyy_pdf_in 2>&1 | Tee-Object -file $log -Append
-    while (!(Test-Path $pdf)) {
-        Start-Sleep 10
-    }
+    Do {
+        Start-Sleep -Seconds 5
+    } While (!(Test-Path $pdf))
     Write-Verbose "Move object PDF from ABBYY in directory to object directory and cleanup ABBYY in."
     Move-Item $pdf $path\$object 2>&1 | Tee-Object -file $log -Append
-    Remove-Item $txt 2>&1 | Tee-Object -file $log -Append
+    Write-Verbose "$(. Get-TimeStamp) Delete empty directory on ABBYY server."
+    Remove-Item $abbyy_pdf_out\$object 2>&1 | Tee-Object -file $log -Append
     Write-Verbose "$(. Get-TimeStamp) Convert-to-PDF-ABBYY complete for $object"
 }
 
@@ -1021,6 +1024,116 @@ function Get-Images-Using-IIIF {
     Write-Verbose "$(Get-TimeStamp) Get-Images-Using-IIIF complete for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"
 }
 
+function Update-OCR-ABBYY {
+    [cmdletbinding()]
+    Param(
+        [Parameter()]
+        [string]
+        $path,
+
+        [Parameter()]
+        [int16]
+        $throttle,
+
+        [Parameter()]
+        [string]
+        $collection,
+
+        [Parameter()]
+        [string]
+        $field,
+
+        [Parameter()]
+        [string]
+        $method,
+
+        [Parameter()]
+        [string]
+        $log,
+
+        [Parameter()]
+        $ocrCount,
+
+        [Parameter()]
+        $nonText
+    )
+    
+    # Variables
+    $csv = $null
+    $csv = @()
+    $ocrCount = 0
+    $nonText = 0
+    $l = 0
+    $i = 0
+    $abbyy_staging = "O:\pcd\text\staging"
+    $abbyy_in = "O:\pcd\text\input"
+    $abbyy_out = "O:\pcd\text\output"
+
+    Write-Verbose "$(Get-Date -Format u) Update-OCR-ABBYY starting."
+    Write-Verbose "$(Get-Date -Format u) Import list of dmrecord numbers for items with images for the collection."
+    
+    Switch -CaseSensitive ($method) {
+        API {
+            $items = Import-Csv -path $path\items.csv
+
+        }
+        IIIF {
+            $items = Import-Csv -Path $path\images.csv
+        }
+    }
+    $total = ($items | Measure-Object).Count
+    
+    Write-Verbose "$(Get-Date -Format u) Begin copying images to the ABBYY server." | Tee-Object -FilePath $log_batchOCR -Append
+    Write-Progress -Activity "Update OCR ABBYY" -Status "Copying Images to ABBYY Server" -PercentComplete ($l / $total * 100)
+    If (!(Test-Path "$abbyy_staging\$collection")) { New-Item -ItemType Directory -Path $abbyy_staging\$collection }
+    Get-ChildItem *.jpg -Path $path | ForEach-Object {
+        Copy-Item $_.FullName -Destination $abbyy_staging\$collection 2>&1
+        $l++
+        Write-Progress -Activity "Update OCR ABBYY" -Status "Copying Images to ABBYY Server" -CurrentOperation "$l/$total Complete" -PercentComplete ($l / $total * 100)
+    }
+    Move-Item -Path $abbyy_staging\$collection -Destination $abbyy_in\$collection 2>&1
+    $jpgs = (Get-ChildItem *.jpg -Path $abbyy_in\$collection -Recurse).Count
+    $txts = (Get-ChildItem *.txt -Path $abbyy_out\$collection -Recurse).Count
+    
+    Write-Verbose "$(Get-Date -Format u) Images copied to ABBYY server. OCR starting for $jpgs images." | Tee-Object -FilePath $log_batchOCR -Append
+    Write-Progress -Activity "Update OCR ABBYY" -Status "Running OCR on Images" -PercentComplete ($txts / $jpgs * 100)
+    Do {
+        Start-Sleep -Seconds 5
+        $txts = (Get-ChildItem *.txt -Path $abbyy_out\$collection -Recurse).Count
+        Write-Progress -Activity "Update OCR ABBYY" -Status "Running OCR on Images" -CurrentOperation "$txts/$jpgs Complete" -PercentComplete ($txts / $jpgs * 100)
+    } While ($jpgs -ne $txts)
+    $txts = (Get-ChildItem *.txt -Path $abbyy_out\$collection -Recurse).Count
+    
+    Write-Verbose "$(Get-Date -Format u) OCR complete. Beginning to optmize OCR output and build metadata csv for Batch Edit." | Tee-Object -FilePath $log_batchOCR -Append
+    Write-Progress -Activity "Update OCR ABBYY" -Status "Optimizing OCR and Building Metadata CSV" -PercentComplete ($i / $txts * 100)
+    Get-ChildItem *.txt -Path $abbyy_out\$collection | ForEach-Object {            
+        Optimize-OCR -ocrtext $_.FullName 2>&1 | Tee-Object -FilePath $log_batchOCR -Append
+        $ocrtext = (Get-Content $_.FullName) -join "`n"
+        $dmrecord = ($_.BaseName).split("_")[-1]
+        $csv += [PSCustomObject]@{
+            dmrecord = $dmrecord
+            $field   = "$ocrtext"
+        }    
+        $i++
+        Write-Progress -Activity "Update OCR ABBYY" -Status "Optimizing OCR and Building Metadata CSV" -CurrentOperation "$i/$txts Complete" -PercentComplete ($i / $txts * 100)
+    }
+
+    # Export CSV
+    $csv | Export-CSV $path\ocr.csv -Append -NoTypeInformation 2>&1 | Tee-Object -FilePath $log_batchOCR -Append
+
+    # Update QC counts
+    foreach ($item in $items) {
+        $ocr = ($abbyy_out + "\" + $collection + "\" + $item.id + ".txt")
+        If (Test-Path "$ocr") { $ocrCount++ } else { $nonText++ }
+    }
+
+    # Clean up
+    Remove-Item -Path $abbyy_out\$collection -Recurse 2>&1 | Tee-Object -FilePath $log_batchOCR -Append
+    
+    Write-Verbose "$(Get-Date -Format u) Update-OCR-ABBYY complete. $ocrCount images with text out of $total images processed."
+    return $ocrCount, $nonText
+}
+
 # Workflows require Powershell 5.1, i.e. Windows...
 # When PowerShell 7 is released, ForEach-Object will have -Parallel and -ThrottleLimit parameters, can convert these to functions. https://devblogs.microsoft.com/powershell/powershell-7-preview-3/#user-content-foreach-object--parallel
 Workflow Get-Images-Using-API-Throttle {
@@ -1110,7 +1223,8 @@ Workflow Convert-to-JP2 {
 
     if ($object -in $items) {
         $out = "$path\items"
-    } else {
+    }
+    else {
         $out = "$path\$object\scans"
 
     }

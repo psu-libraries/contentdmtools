@@ -22,8 +22,10 @@
     Integer for the number of CPU processes when copying TIFs to the ABBYY server. (DEFAULT VALUE: 4)
     .PARAMETER method
     The download method for collection images, API or IIIF. (DEFAULT VALUE: API)
+    .PARAMETER ocrengine
+    The OCR engine used for processing images into text, tesseract or ABBYY. (DEFAULT VALUE: tesseract)
     .EXAMPLE
-    .\batchOCR.ps1 -collection benson -field transa -public https://digital.libraries.psu.edu -server https://urlToAdministrativeServer.edu -license XXXX-XXXX-XXXX-XXXX -path "E:\benson" -user dfj32 -throttle 8 -method IIIF
+    .\batchOCR.ps1 -collection benson -field transa -public https://digital.libraries.psu.edu -server https://urlToAdministrativeServer.edu -license XXXX-XXXX-XXXX-XXXX -path "E:\benson" -user dfj32 -throttle 8 -method IIIF -ocrengine tesseract
     .INPUTS
     System.String
     System.Integer
@@ -69,7 +71,12 @@ param(
     [Parameter()]
     [ValidateSet('API', 'IIIF')]
     [string]
-    $method = 'API'
+    $method = 'API',
+
+    [Parameter()]
+    [string]
+    [ValidateSet('ABBYY', 'tesseract')]
+    $ocrengine = 'tesseract'
 )
 
 # Variables
@@ -96,7 +103,8 @@ Write-Output "Staging Path:`t`t$path" | Tee-Object -FilePath $log_batchOCR -Appe
 Write-Output "User:`t`t`t$user" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Throttle:`t`t$throttle" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Method:`t`t`t$method" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output ("Executed Command:`t"+$MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output "OCR Engine:`t`t$ocrengine" | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output ("Executed Command:`t" + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
 
 try { Test-Path $path | Out-Null }
@@ -138,7 +146,8 @@ switch ($method) {
                 Write-Output "$(. Get-TimeStamp) Something went wrong when downloading the images, Batch OCR exiting before completion." | Tee-Object -FilePath $log_batchOCR -Append
                 Return
             }
-        } else {
+        }
+        else {
             Write-Output ("$(. Get-TimeStamp) Downloading $total images from CONTENTdm using the API. Images will be downloaded in parallel, without throttle for efficency. Batch OCR will pause until all downloads have completed. You can ignore any warning about suspended or disconnected jobs...") | Tee-Object -FilePath $log_batchOCR -Append
             . Get-Images-Using-API -path $path -server $server -collection $collection -public $public | Tee-Object -FilePath $log_batchOCR -Append
             if ($LastExitCode -eq 1) {
@@ -159,18 +168,25 @@ switch ($method) {
     }
 }
 
-Write-Output "`r`n$(. Get-TimeStamp) Running Tesseract OCR on images. This really cranks up your CPU and you may occassionally see warning messages from Tesseract, e.g. box not within image. Usually nothing to worry about, just don't set your throttle past the maximum number of logical processors on this computer.`r`n
-$(. Get-TimeStamp) Sometimes Tesseract can take a long time on complex images. If it looks like Batch OCR is stuck, give it more time and see if the batch completes. Large collections and complex images sometimes take longer and the terminal dispaly will sometimes not update. OCRing...`r`n" | Tee-Object -FilePath $log_batchOCR -Append
-
 # does batching need to be added in for large record sets? (already comes paged...) Tesseract stays open in Task Manager for a while
-$return = . Update-OCR -path $path -throttle $throttle -collection $collection -field $field -gm $gm -tesseract $tesseract -method $method | Tee-Object -FilePath $log_batchOCR -Append
-$ocrCount = $return[0]
-$nonText = $return[1]
+switch ($ocrengine) {
+    tesseract {
+        Write-Output "`r`n$(. Get-TimeStamp) Running Tesseract OCR on images. This really cranks up your CPU and you may occassionally see warning messages from Tesseract, e.g. box not within image. Usually nothing to worry about, just don't set your throttle past the maximum number of logical processors on this computer.`r`n$(. Get-TimeStamp) Sometimes Tesseract can take a long time on complex images. If it looks like Batch OCR is stuck, give it more time and see if the batch completes. Large collections and complex images sometimes take longer and the terminal display will sometimes not update. OCRing...`r`n" | Tee-Object -FilePath $log_batchOCR -Append
+        $return = . Update-OCR -path $path -throttle $throttle -collection $collection -field $field -gm $gm -tesseract $tesseract -method $method | Tee-Object -FilePath $log_batchOCR -Append
+        $ocrCount = $return[0]
+        $nonText = $return[1]
+    }
+    ABBYY {
+        $return = . Update-OCR-ABBYY -path $path -throttle $throttle -collection $collection -field $field -method $method -log $log_batchOCR
+        $ocrCount = $return[-2]
+        $nonText = $return[-1]
+    }
+}
 Write-Verbose "ocrCount is $ocrCount"
 Write-Verbose "nonText is $nonText"
 
 if (!(Test-Path $path\ocr.csv)) {
-    Write-Error "(. Get-TimeStamp) An error occured before the OCR metadata CSV for Batch Edit could be created. Exiting Batch OCR." | Tee-Object -FilePath $log_batchOCR -Append
+    Write-Error "$(. Get-TimeStamp) An error occured before the OCR metadata CSV for Batch Edit could be created. Exiting Batch OCR." | Tee-Object -FilePath $log_batchOCR -Append
     Return
 }
 

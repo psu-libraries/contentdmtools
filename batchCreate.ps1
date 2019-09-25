@@ -19,7 +19,7 @@
     .PARAMETER throttle
     Integer for the number of CPU processes when copying TIFs to the ABBYY server. (DEFAULT VALUE: 6)
     .EXAMPLE
-    .\batchCreate.ps1 -path E:\pstsc_01822\2018-02\ -jp2 no -ocr extract -originals discard -throttle 6
+    .\batchCreate.ps1 -path E:\pstsc_01822\2018-02\ -jp2 no -ocr extract -ocrengine tesseract -originals discard -throttle 6
     .INPUTS
     System.String
     System.Integer
@@ -192,7 +192,7 @@ ForEach ($record in $csv) {
             Write-Output "        OCR starting (PDF and TXT output)." | Tee-Object -file $log_batchCreate -Append
             if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
             if ($ocrengine -eq "ABBYY") {
-                & Convert-to-Text-And-PDF-ABBYY -path $path -object $object -log $log_batchCreate -pdftk $pdftk 2>&1 | Tee-Object -file $log_batchCreate -Append
+                & Convert-to-Text-And-PDF-ABBYY -path $path -object $object -pdftk $pdftk 2>&1 | Tee-Object -file $log_batchCreate -Append
             }
             elseif ($ocrengine -eq "tesseract") {
                 & Convert-to-Text-And-PDF -path $path -object $object -throttle $throttle -log $log_batchCreate -tesseract $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
@@ -234,11 +234,11 @@ ForEach ($record in $csv) {
             Write-Verbose "$(. Get-TimeStamp) [$object] Converting TIF to PDF using $ocrengine. Object-level PDF will be saved in the object directory."
             Write-Output "        OCR starting (PDF output)." | Tee-Object -file $log_batchCreate -Append
 
-            if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
             if ($ocrengine -eq "ABBYY") {
                 & Convert-to-PDF-ABBYY -path $path -object $object -throttle $throttle -log $log_batchCreate
             }
             elseif ($ocrengine -eq "tesseract") {
+                if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
                 & Convert-to-PDF -path $path -object $object -throttle $throttle -log $log_batchCreate  -tesseract $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
                 & Merge-PDF -path $path -object $object -pdfs transcripts -log $log_batchCreate -gs $gs
                 Remove-Item $path\$object\transcripts -Recurse | Tee-Object -file $log_batchCreate -Append
