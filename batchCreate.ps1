@@ -123,10 +123,33 @@ ForEach ($record in $csv) {
     $percent = ($o / $csv.Count) * 100
     Write-Progress -Activity "Batch Create" -Status "Processing resources in $metadata"  -CurrentOperation "Processing $object, $o of $($csv.Count)" -PercentComplete $percent
     Write-Output "$(. Get-TimeStamp) Starting $object ($o of $($csv.Count) resources)." | Tee-Object -file $log_batchCreate -Append
+    
+    Write-Verbose "$(. Get-TimeStamp) [$object] Check for the presence of redacted TIF files and separate according to value of originals parameter."
+    $redacted = & Find-Redacted-Filesets -path $path\$object
+      
+    if ($null -ne $redacted.redacted) {
+        Write-Verbose "Redacted Files:"
+        Write-Verbose $redacted.redacted
+        if ($originals -eq "discard") {
+            $redacted.unredacted | ForEach-Object {
+                Remove-Item $path\$object\$_ 2>&1 | Tee-Object -file $log_batchCreate -Append
+            }
+        }
+        elseif ($originals -eq "keep") {
+            if (!(Test-Path $path\$object\originals)) { New-Item -ItemType Directory -Path $path\$object\originals | Out-Null }
+            $redacted.unredacted | ForEach-Object {
+                Move-Item $path\$object\$_ -Destination $path\$object\originals 2>&1 | Tee-Object -file $log_batchCreate -Append
+            }
+        }
+        elseif ($originals -eq "skip") {
+            if (!(Test-Path $path\$object\unredacted)) { New-Item -ItemType Directory -Path $path\$object\unredacted | Out-Null }
+            $redacted.unredacted | ForEach-Object {
+                Move-Item $path\$object\$_ -Destination $path\$object\unredacted 2>&1 | Tee-Object -file $log_batchCreate -Append
+            }
+        }
+    }
 
-    ### Need function here to handle redacted tiffs -- move unredacted to another directory in the batch
-
-    $tiffs = (Get-ChildItem *.tif* -Path $path\$object  -Recurse).Count
+    $tiffs = (Get-ChildItem *.tif* -Path $path\$object).Count
     if ($jp2 -eq "true") {
         Write-Verbose "$(. Get-TimeStamp) [$object] Finding TIF files, converting them to JP2. Item JP2s are saved in the items directory, object JP2s are saved in a scans object subdirectory."
         Write-Output "        JP2 conversion starting: $tiffs TIF." | Tee-Object -file $log_batchCreate -Append

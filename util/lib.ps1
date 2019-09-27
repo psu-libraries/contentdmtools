@@ -92,6 +92,55 @@ function Get-User-Settings {
     Return $pw
 }
 
+function Find-Redacted-Filesets {
+    <#
+	    .SYNOPSIS
+        Find pairs of unredacted and redacted files of the same item. 
+	    .DESCRIPTION
+	    Find all the tif files in the path and sort them by name, identify the redacted files and add filenames for redacted and unredacted files to arrays. Use the arrays to create a PSObject with all the redacted filesets.
+	    .PARAMETER path
+        The path to the directory holding files to scan for redacted filesets.
+	    .EXAMPLE
+	    Find-Redacted-Filesets -path pstsc_01822_9331bb5ca9fa6863f7e1273c41738f44_0195
+	    .INPUTS
+        System.String
+        .OUTPUTS
+        System.Object
+    #>
+    
+    Param(
+        [Parameter()]
+        [string]
+        $path
+    )
+
+    $unredacted = @()
+    $redacted = @()
+
+    $files = Get-ChildItem -Path $path -Filter *.tif -Recurse | Sort-Object -Property Name
+
+    $files -match '(.*)_redacted' | ForEach-Object {
+        $base = $_.BaseName
+        $unredacted += ($base.substring(0, $base.Length - 9) + $_.Extension)
+        $redacted += $_.Name
+    }
+
+    $i = 0
+    $redacted_filesets = $unredacted | ForEach-Object {
+        $unredactedCurrent = $_
+        $redactedCurrent = $redacted[$i]
+        $properties = @{
+            Unredacted = $unredactedCurrent
+            Redacted   = $redactedCurrent
+        }
+        New-Object -TypeName PSObject -Property $properties
+        $i++
+    }
+    $redacted_filesets
+}
+
+
+
 #SOAP functions # https://ponderingthought.com/2010/01/17/execute-a-soap-request-from-powershell/
 function Send-SOAPRequest {
     <#
@@ -345,8 +394,8 @@ function Optimize-OCR {
             -replace '[\u009D]' `
             -replace '[\u000C]'
     } | Where-Object { $_.trim() -ne "" } | Set-Content $ocrText
-    Return $ocrText
-    Write-Verbose "$(. Get-TimeStamp) Optimize-OCR complete"
+Return $ocrText
+Write-Verbose "$(. Get-TimeStamp) Optimize-OCR complete"
 }
 
 function Get-Text-From-PDF {
@@ -701,7 +750,7 @@ function Convert-to-Text-And-PDF-ABBYY {
     $abbyy_staging = "O:\pcd\cho-cdm\staging"
     $abbyy_both_in = "O:\pcd\cho-cdm\input"
     $abbyy_both_out = "O:\pcd\cho-cdm\output"
-    $tifs = (Get-ChildItem *.tif* -Path $path\$object -Recurse).count
+    $tifs = (Get-ChildItem *.tif* -Path $path\$object).count
     New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null
     $(. Copy-TIF-ABBYY -path $path -object $object -throttle $throttle -abbyy_staging $abbyy_staging  2>&1)
     Write-Verbose "$(. Get-TimeStamp) Move copy of object TIFs from ABBYY staging to ABBYY in directory."
@@ -774,7 +823,7 @@ function Convert-to-Text-ABBYY {
     $abbyy_staging = "O:\pcd\text\staging"
     $abbyy_text_in = "O:\pcd\text\input"
     $abbyy_text_out = "O:\pcd\text\output"
-    $tifs = (Get-ChildItem *.tif* -Path $path\$object -Recurse).count
+    $tifs = (Get-ChildItem *.tif* -Path $path\$object).count
     New-Item -ItemType Directory -Path $abbyy_staging\$object | Out-Null
     Write-Verbose "$(. Get-TimeStamp)  Copy TIF images to ABBYY server."
     . Copy-TIF-ABBYY -path $path -object $object -throttle $throttle -abbyy_staging $abbyy_staging -log $log 2>&1 | Tee-Object -file $log -Append
@@ -1217,8 +1266,8 @@ Workflow Convert-to-JP2 {
         $adobe
     )
     Write-Verbose "Convert-to-JP2 starting for $object"
-    $files = Get-ChildItem *.tif* -Path $path\$object -Recurse
-    $total = (Get-ChildItem *.tif* -Path $path\$object -Recurse).Count
+    $files = Get-ChildItem *.tif* -Path $path\$object
+    $total = (Get-ChildItem *.tif* -Path $path\$object).Count
     $i = 0
 
     if ($object -in $items) {
@@ -1274,7 +1323,7 @@ Workflow Convert-to-Text-And-PDF {
         $tesseract
     )
     Write-Verbose "Convert-to-Text-And-PDF starting for $object"
-    $files = Get-ChildItem -Path $path\$object *.tif* -Recurse
+    $files = Get-ChildItem -Path $path\$object *.tif*
     foreach -Parallel -Throttle $throttle ($file in $files) {
         $basefilename = $file.BaseName
         Write-Verbose "Run Tesseract on $basefilename to generate TXT and PDF"
@@ -1311,7 +1360,7 @@ Workflow Convert-to-Text {
         $tesseract
     )
     Write-Verbose "Convert-to-Text starting for $object"
-    $files = Get-ChildItem -Path $path\$object *.tif* -Recurse
+    $files = Get-ChildItem -Path $path\$object *.tif*
     foreach -Parallel -Throttle $throttle ($file in $files) {
         $basefilename = $file.BaseName
         $fullfilename = $file.FullName
@@ -1356,7 +1405,7 @@ Workflow Convert-to-PDF {
         $tesseract
     )
     Write-Verbose "Convert-to-PDF starting for $object"
-    $files = Get-ChildItem -Path $path\$object *.tif* -Recurse
+    $files = Get-ChildItem -Path $path\$object *.tif*
     foreach -Parallel -Throttle $throttle ($file in $files) {
         $basefilename = $file.BaseName
         Write-Verbose "Convert TIFs to PDF using Tesseract"
@@ -1390,7 +1439,7 @@ Workflow Copy-TIF-ABBYY {
         $abbyy_staging
     )
     Write-Verbose "Copy-TIF-ABBYY starting for $object"
-    $files = Get-ChildItem *.tif* -Path $path\$object -Recurse
+    $files = Get-ChildItem *.tif* -Path $path\$object
     Write-Verbose "Parallel copy TIFs to ABBYY staging."
     foreach -Parallel -Throttle $throttle ($file in $files) {
         Copy-Item -Path $file.FullName -Destination $abbyy_staging\$object  2>&1 | Tee-Object -file $log -Append
@@ -1486,21 +1535,21 @@ Workflow Update-OCR {
                         -replace '[\u009D]' `
                         -replace '[\u000C]'
                 } | Where-Object { $_.trim() -ne "" } | Set-Variable -Name ocrText
-                ($ocrText) -join "`n" | Set-Variable -Name ocrText
-                Write-Verbose "$(Get-Date -Format u) Creating an OCR update entry for $imageBase in metadata object to send to CONTENTdm Catcher."
-                $csv += [PSCustomObject]@{
-                    dmrecord     = $using:item.dmrecord
-                    $using:field = $ocrText
-                }
-                Write-Verbose "$(Get-Date -Format u) Export metadata CSV for use in Batch Edit."
-                $csv | Export-CSV $using:path\ocr.csv -Append -NoTypeInformation -Force
+            ($ocrText) -join "`n" | Set-Variable -Name ocrText
+            Write-Verbose "$(Get-Date -Format u) Creating an OCR update entry for $imageBase in metadata object to send to CONTENTdm Catcher."
+            $csv += [PSCustomObject]@{
+                dmrecord     = $using:item.dmrecord
+                $using:field = $ocrText
             }
+            Write-Verbose "$(Get-Date -Format u) Export metadata CSV for use in Batch Edit."
+            $csv | Export-CSV $using:path\ocr.csv -Append -NoTypeInformation -Force
         }
-        $workflow:l++
-        if (Test-Path $($path + "\" + $id + ".txt")) { $ocrCount++ } else { $nonText++ }
-        Write-Verbose "$(Get-Date -Format u) OCR complete for $id."
-        Write-Progress -Activity "Update OCR" -Status "OCR finishing" -CurrentOperation "Processing $id" -PercentComplete ($l / $total * 100)
     }
-    Write-Verbose "$(Get-Date -Format u) Update-OCR complete. $ocrCount images with text out of $i images processed."
-    return $ocrCount, $nonText
+    $workflow:l++
+    if (Test-Path $($path + "\" + $id + ".txt")) { $ocrCount++ } else { $nonText++ }
+    Write-Verbose "$(Get-Date -Format u) OCR complete for $id."
+    Write-Progress -Activity "Update OCR" -Status "OCR finishing" -CurrentOperation "Processing $id" -PercentComplete ($l / $total * 100)
+}
+Write-Verbose "$(Get-Date -Format u) Update-OCR complete. $ocrCount images with text out of $i images processed."
+return $ocrCount, $nonText
 }
