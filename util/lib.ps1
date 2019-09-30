@@ -1268,7 +1268,6 @@ Workflow Convert-to-JP2 {
     Write-Verbose "Convert-to-JP2 starting for $object"
     $files = Get-ChildItem *.tif* -Path $path\$object
     $total = (Get-ChildItem *.tif* -Path $path\$object).Count
-    $i = 0
 
     if ($object -in $items) {
         $out = "$path\items"
@@ -1279,18 +1278,26 @@ Workflow Convert-to-JP2 {
     }
 
     foreach -Parallel -Throttle $throttle ($file in $files) {
-        $workflow:i++
-        Write-Progress -Activity "Batch Create Compound objects" -Status "Converting $file to JP2" -PercentComplete ($i / $total * 100)
         $basefilename = $file.Basename
-        $fullfilename = $file.Fullname
-        $sourceICC = "$path\$object\source_$basefilename.icc"
+        $fullfilename = $file.Fullname          
+        $sourceICC = ($path + "\" + $object + "\" + "source_" + $basefilename + ".icc")
         Write-Verbose "Extracting color profile for $basefilename using GraphicsMagick"
         Invoke-Expression "$gm convert $fullfilename $sourceICC" 2>&1 | Tee-Object -file $log -Append
-        Write-Verbose "Converting $basefilename to JP2 using souce color profile"
-        Write-Debug "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $out\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
-        Invoke-Expression "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $out\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
-        Write-Verbose "Delete source color profile"
-        Remove-Item $sourceICC
+        Write-Verbose "Converting $basefilename to JP2 using souce color profile, if present."
+        if ((Get-Item $sourceICC).length -gt 0) {
+            Write-Verbose "Invoke-Expression $gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $out\$basefilename.jp2"
+            Invoke-Expression "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $out\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
+            Write-Verbose "Delete source color profile"
+            Remove-Item $sourceICC
+        }
+        else {
+            Write-Verbose "Invoke-Expression $gm convert $fullfilename -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 $out\$basefilename.jp2"
+            Invoke-Expression "$gm convert $fullfilename -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 $out\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
+            Write-Verbose "Delete source color profile" # May exist as zero-byte file
+            Remove-Item $sourceICC
+        }
+        $jp2s = (Get-ChildItem -Path $path\$object -Filter "*.jp2" -Recurse).Count
+        Write-Progress -Activity "Batch Create Compound objects" -Status "Converting $file to JP2" -CurrentOperation "$jp2s/$total TIFs converted to JP2" -PercentComplete ($jp2s/$total * 100)
     }
     Write-Verbose "Convert-to-JP2 complete for $object"
 }

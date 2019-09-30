@@ -151,7 +151,23 @@ ForEach ($record in $csv) {
 
     $tiffs = (Get-ChildItem *.tif* -Path $path\$object).Count
     if ($jp2 -eq "true") {
-        Write-Verbose "$(. Get-TimeStamp) [$object] Finding TIF files, converting them to JP2. Item JP2s are saved in the items directory, object JP2s are saved in a scans object subdirectory."
+        Write-Verbose "$(. Get-TimeStamp) [$object] Finding TIF files, converting them to JP2. Item JP2s are saved in the items directory, object JP2s are saved in a scans object subdirectory. TIFs larger than 8000 pixels will be reduced in size before conversion."
+
+        # Find and reduce TIFs with edges over 8000 pixels.
+        Get-ChildItem -Path $path\$object -Filter "*.tif*" | ForEach-Object {
+            $image = New-Object -ComObject Wia.ImageFile         
+            $image.LoadFile($_.FullName)
+            If (($image.Width -gt 8000) -or ($image.Height -gt 8000)) {
+                Write-Verbose "Reducing $_"
+                $name = $_.BaseName
+                $reduced = ($name + "_reduced" + $_.Extension)
+                $original = $_.FullName
+                Invoke-Expression "$gm convert -resize 8000x8000> $original $path\$object\$reduced"
+                if (!(Test-Path $path\$object\originals)) { New-Item -ItemType Directory -Path $path\$object\originals | Out-Null }
+                Move-Item -Path $_.Fullname -Destination $path\$object\originals\
+            }
+        }
+        
         Write-Output "        JP2 conversion starting: $tiffs TIF." | Tee-Object -file $log_batchCreate -Append
         if (!(Test-Path $path\$object\scans)) { New-Item -ItemType Directory -Path $path\$object\scans | Out-Null }
         & Convert-to-JP2 -path $path -object $object -items $items -throttle $throttle -log $log_batchCreate -gm $gm -adobe $adobe
@@ -291,6 +307,11 @@ ForEach ($record in $csv) {
     if ($originals -eq "keep") {
         Write-Verbose "$(. Get-TimeStamp) [$object] Arranging TIFs into a originals subirectory."
         if (!(Test-Path $path\$object\originals)) { New-Item -ItemType Directory -Path $path\$object\originals | Out-Null }
+        # Delete any reduced tifs
+        Get-ChildItem -Path $path\$object *_reduced.tif* -Recurse | ForEach-Object {
+            Remove-Item $_.FullName | Out-Null
+        }
+        # Move tifs to originals directory
         Get-ChildItem -Path $path\$object *.tif* -Recurse | ForEach-Object {
             Move-Item $_.FullName -Destination $path\$object\originals 2>&1 | Tee-Object -file $log_batchCreate -Append
         }
@@ -301,14 +322,44 @@ ForEach ($record in $csv) {
         Get-ChildItem -Path $path\$object *.tif* -Recurse | ForEach-Object {
             Remove-Item $_.FullName 2>&1 | Tee-Object -file $log_batchCreate -Append
         }
+        if (Test-Path $path\$object\originals) { Remove-Item $path\$object\originals -Recurse | Out-Null }
         Write-Output "        Originals discarded." | Tee-Object -file $log_batchCreate -Append
     }
     elseif ($originals -eq "skip") {
         Write-Verbose "$(. Get-TimeStamp) [$object] Originals handling set to skip, TIFs will be left in place."
+        # Delete any reduced tifs
+        Get-ChildItem -Path $path\$object *_reduced.tif* -Recurse | ForEach-Object {
+            Remove-Item $_.FullName | Out-Null
+        }
+        # Move any unreduced originals back to the object directory and delete the originals directory
+        if (Test-Path $path\$object\originals) { 
+            Get-ChildItem -Path $path\$object\originals | ForEach-Object { Move-Item $_.FullName -Destination $path\$object\ }
+            Remove-Item -Path $path\$object\originals | Out-Null
+        }
     }
     if ($record.Level) {
         Write-Output "        Type is $($record.Level)." | Tee-Object -file $log_batchCreate -Append
     }
+
+    # Sort objects by access restrictions
+    if ($record."Restriction Type") {
+        if ($record."Restriction Type" -eq "none") {
+            Write-Verbose "$(. Get-TimeStamp) [$object] Moving object to open-access directory."
+            if (!(Test-Path $path\open-access)) { New-Item -ItemType Directory -Path $path\open-access | Out-Null }
+            Move-Item $path\$object -Destination $path\open-access 2>&1 | Tee-Object -file $log_batchCreate -Append
+        }
+        if ($record."Restriction Type" -eq "local") {
+            Write-Verbose "$(. Get-TimeStamp) [$object] Moving object to psu-access directory."
+            if (!(Test-Path $path\psu-access)) { New-Item -ItemType Directory -Path $path\psu-access | Out-Null }
+            Move-Item $path\$object -Destination $path\psu-access 2>&1 | Tee-Object -file $log_batchCreate -Append
+        }
+        if ($record."Restriction Type" -eq "total") {
+            Write-Verbose "$(. Get-TimeStamp) [$object] Moving object to no-access directory."
+            if (!(Test-Path $path\no-access)) { New-Item -ItemType Directory -Path $path\no-access | Out-Null }
+            Move-Item $path\$object -Destination $path\no-access 2>&1 | Tee-Object -file $log_batchCreate -Append
+        }
+    }
+
     Write-Output "$(. Get-TimeStamp) Completed $object." | Tee-Object -file $log_batchCreate -Append
 }
 
