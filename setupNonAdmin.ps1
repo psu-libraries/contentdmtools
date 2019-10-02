@@ -13,16 +13,16 @@ $log = "$cdmt_root\logs\setupNonAdmin_log" + $(Get-Date -Format yyyy-MM-ddTHH-mm
 Write-Output "Setting up some dependencies for the CONTENTdm Tools Dashboard. If you see warnings about modules currently being used, you can safely ignore them." | Tee-Object -FilePath $log -Append
 
 # Set PSGallery repository as trusted.
-Set-PSRepository PSGallery -InstallationPolicy Trusted | Tee-Object -FilePath $log -Append
+Set-PSRepository PSGallery -InstallationPolicy Trusted 2>&1 | Tee-Object -FilePath $log -Append
 
 # Install Nuget package provider.
 If (!(Get-Module -ListAvailable -Name "NuGet")) {
-    Install-Module NuGet -Force -Scope CurrentUser | Tee-Object -FilePath $log -Append
+    Install-Module NuGet -Force -Scope CurrentUser 2>&1 | Tee-Object -FilePath $log -Append
 }
 
 # Update the PowershellGet module.
 If (((get-module -listAvailable -Name "PowershellGet").version.major) -lt 2 ) {
-    Install-Module PowershellGet -Force -AllowClobber -Scope CurrentUser| Tee-Object -FilePath $log -Append
+    Install-Module PowershellGet -Force -AllowClobber -Scope CurrentUser 2>&1 | Tee-Object -FilePath $log -Append
 }
 
 Write-Output "Please close this PowerShell windows and run this setup script again. After installing the last dependency, the session needs to be restarted before proceeding. If this is the second time you have seen this message, press any key to continue." | Tee-Object -FilePath $log -Append
@@ -30,10 +30,10 @@ Write-Output "Please close this PowerShell windows and run this setup script aga
 
 # Install the Universal Dashboard module.
 if (!(Get-Module -ListAvailable -Name "UniversalDashboard*")) {
-    Install-Module UniversalDashboard.Community -Force -AcceptLicense -AllowPrerelease -Scope CurrentUser | Tee-Object -FilePath $log -Append
+    Install-Module UniversalDashboard.Community -Force -AcceptLicense -AllowPrerelease -Scope CurrentUser 2>&1 | Tee-Object -FilePath $log -Append
 }
 
 # Unblock CONTENTdm Tools PowerShell Scripts
 Get-ChildItem *.ps1, *.bat -Recurse | ForEach-Object {
-    Unblock-File $_.FullName | Tee-Object -FilePath $log -Append
+    Unblock-File $_.FullName 2>&1 | Tee-Object -FilePath $log -Append
 }
