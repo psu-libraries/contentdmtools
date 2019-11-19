@@ -4,11 +4,42 @@
 
 # Variables
 $scriptpath = $MyInvocation.MyCommand.Path
-$cdmt_root = Split-Path $scriptpath
+$Global:cdmt_root = Split-Path $scriptpath
 
 # Import Library
-. $cdmt_root\util\lib.ps1
-. Get-Org-Settings
+function Get-Org-Settings {
+    <#
+	    .SYNOPSIS
+        Retrieve cached organization settings.
+	    .DESCRIPTION
+	    Parse cached CSV file of organization settings, return cached settings and set them as global defaults.
+	    .EXAMPLE
+        Get-Org-Settings
+	    .INPUTS
+        System.String
+        .OUTPUTS
+        System.Hashtable
+    #>
+    Write-Verbose "Get-Org-Settings checking for stored settings."
+    $Return = @{ }
+    if (Test-Path settings\org.csv) {
+        $orgcsv = $(Resolve-Path settings\org.csv)
+        $orgcsv = Import-Csv settings\org.csv
+        foreach ($org in $orgcsv) {
+            Write-Verbose ("Public URL: " + $org.public)
+            $Return.public = $org.public
+            Write-Verbose ("Server URL: " + $org.server)
+            $Return.server = $org.server
+            Write-Verbose ("License: " + $org.license)
+            $Return.license = $org.license
+            $Global:cdmt_public = $org.public
+            $Global:cdmt_server = $org.server
+            $Global:cdmt_license = $org.license
+        }
+    }
+    Return $Return
+}
+Get-Org-Settings
 
 $HomePage = New-UDPage -Name "Home" -Content {
     New-UDLayout -Columns 2 -Content {
@@ -42,7 +73,7 @@ $Settings = New-UDPage -Name "Settings" -Content {
             $org | Add-Member -MemberType NoteProperty -Name public -Value $public
             $org | Add-Member -MemberType NoteProperty -Name server -Value $server
             $org | Add-Member -MemberType NoteProperty -Name license -Value $license
-            $org | Export-Csv "$cdmt_root\settings\org.csv" -NoTypeInformation
+            $org | Export-Csv "$Global:cdmt_root\settings\org.csv" -NoTypeInformation
             $Global:cdmt_public = $public
             $Global:cdmt_server = $server
             $Global:cdmt_license = $license
@@ -58,14 +89,14 @@ $Settings = New-UDPage -Name "Settings" -Content {
             Param($user, $password, $throttle, $staging)
             # Still need to update batchEdit to use these settings and see if the password actually works!
             $SecurePassword = $($password | ConvertTo-SecureString -AsPlainText -Force)
-            if (Test-Path settings\user.csv) {
-                $usrcsv = Import-Csv .\settings\user.csv
+            if (Test-Path "$Global:cdmt_root\settings\user.csv") {
+                $usrcsv = Import-Csv "$Global:cdmt_root\settings\user.csv"
                 if ($usrcsv.user -eq "$user") {
-                    $usrcsv = Import-Csv .\settings\user.csv
+                    $usrcsv = Import-Csv "$Global:cdmt_root\settings\user.csv"
                     $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
                         $_.password = $SecurePassword | ConvertFrom-SecureString
                     }
-                    $usrcsv | Export-Csv -Path .\settings\user.csv -NoTypeInformation
+                    $usrcsv | Export-Csv -Path "$Global:cdmt_root\settings\user.csv" -NoTypeInformation
                     New-UDInputAction -Content @(
                         New-UDCard -Title "User Settings" -Text "Existing User Updated: $user`r`n$x"
                     )
@@ -74,7 +105,7 @@ $Settings = New-UDPage -Name "Settings" -Content {
                     [pscustomobject]@{
                         user     = "$user"
                         password = $SecurePassword | ConvertFrom-SecureString
-                    } | Export-Csv -Path  ".\settings\user.csv" -Append -NoTypeInformation
+                    } | Export-Csv -Path  "$Global:cdmt_root\settings\user.csv" -Append -NoTypeInformation
                     New-UDInputAction -Content @(
                         New-UDCard -Title "User Settings" -Text "New User Added: $user`r`n"
                     )
@@ -84,7 +115,7 @@ $Settings = New-UDPage -Name "Settings" -Content {
                 [pscustomobject]@{
                     user     = "$user"
                     password = $SecurePassword | ConvertFrom-SecureString
-                } | Export-Csv -Path  ".\settings\user.csv" -Append -NoTypeInformation
+                } | Export-Csv -Path "$Global:cdmt_root\settings\user.csv" -Append -NoTypeInformation
                 New-UDInputAction -Content @(
                     New-UDCard -Title "User Settings" -Text "New User Saved: $user`r`n"
                 )
