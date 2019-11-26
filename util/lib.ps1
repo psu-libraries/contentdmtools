@@ -39,7 +39,7 @@ function Get-Org-Settings {
             $Global:cdmt_license = $org.license
         }
     }
-    Return $Return
+    #Return $Return
 }
 
 function Get-User-Settings {

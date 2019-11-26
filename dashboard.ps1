@@ -7,38 +7,7 @@ $scriptpath = $MyInvocation.MyCommand.Path
 $Global:cdmt_root = Split-Path $scriptpath
 
 # Import Library
-function Get-Org-Settings {
-    <#
-	    .SYNOPSIS
-        Retrieve cached organization settings.
-	    .DESCRIPTION
-	    Parse cached CSV file of organization settings, return cached settings and set them as global defaults.
-	    .EXAMPLE
-        Get-Org-Settings
-	    .INPUTS
-        System.String
-        .OUTPUTS
-        System.Hashtable
-    #>
-    Write-Verbose "Get-Org-Settings checking for stored settings."
-    $Return = @{ }
-    if (Test-Path settings\org.csv) {
-        $orgcsv = $(Resolve-Path settings\org.csv)
-        $orgcsv = Import-Csv settings\org.csv
-        foreach ($org in $orgcsv) {
-            Write-Verbose ("Public URL: " + $org.public)
-            $Return.public = $org.public
-            Write-Verbose ("Server URL: " + $org.server)
-            $Return.server = $org.server
-            Write-Verbose ("License: " + $org.license)
-            $Return.license = $org.license
-            $Global:cdmt_public = $org.public
-            $Global:cdmt_server = $org.server
-            $Global:cdmt_license = $org.license
-        }
-    }
-    Return $Return
-}
+. .\util\lib.ps1
 Get-Org-Settings
 
 $HomePage = New-UDPage -Name "Home" -Content {
