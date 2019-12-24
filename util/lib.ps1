@@ -37,9 +37,13 @@ function Get-Org-Settings {
             $Global:cdmt_public = $org.public
             $Global:cdmt_server = $org.server
             $Global:cdmt_license = $org.license
+            [pscustomobject]@{
+                cdmt_public     = $Global:cdmt_public
+                cdmt_server = $Global:cdmt_server
+                cdmt_license = $Global:cdmt_license
+            }
         }
     }
-    #Return $Return
 }
 
 function Get-User-Settings {
@@ -73,7 +77,9 @@ function Get-User-Settings {
             $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
             $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
             $null = $BSTR
+            $pw
         }
+
         if ("$user" -notin $usrcsv.user) {
             Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
             [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
@@ -89,7 +95,7 @@ function Get-User-Settings {
         $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
         $null = $BSTR
     }
-    Return $pw
+
 }
 
 function Find-Redacted-Filesets {
@@ -1494,7 +1500,7 @@ function Update-OCR {
     $ocrCount = 0
     $nonText = 0
 
-    switch -CaseSensitive ($method) {
+<#     switch -CaseSensitive ($method) {
         API {
             $items = Import-Csv -path $path\items.csv
 
@@ -1502,56 +1508,65 @@ function Update-OCR {
         IIIF {
             $items = Import-Csv -Path $path\images.csv
         }
-    }
-
+    } #>
+    $items = Import-Csv -Path "$path\items.csv"
     $total = ($items | Measure-Object).Count
-
     Write-Verbose "$(Get-Date -Format u) $total Images to process. Starting parallel loop with throttle set to $throttle."
     $i = 0
     $l = 0
-    $items | ForEach-Object -Parallel -ThrottleLimit $throttle {
-        $id = $item.id
-        Write-Verbose "$item"
-        $i++
-        $id = $item.id
-        Write-Progress -Activity "Update OCR" -Status "Converting JPG to grayscale TIF" -CurrentOperation "Processing $id, $using:i of $using:total" -PercentComplete ($using:l / $using:total * 100)
-        Write-Verbose "$(Get-Date -Format u) OCR starting for $id. ($i of $total)"
-        $imageFile = $item.filename
+    $items | ForEach-Object -Parallel {
+        #$i++
+        $id = $_.id
+        #Write-Verbose "$id"
+        #Write-Progress -Activity "Update OCR" -Status "Converting JPG to grayscale TIF" -CurrentOperation "Processing $id, $using:i of $using:total" -PercentComplete ($l / $using:total * 100)
+        #Write-Verbose "$(Get-Date -Format u) OCR starting for $id. ($i of $total)"
+        $imageFile = $_.filename
         if ((Test-Path "$imageFile") -and ((Get-Item $imageFile).Length -gt 0kb)) {
-            Write-Verbose "$(Get-Date -Format u) Converting $imageFile to grayscale TIF for OCR."
-            Invoke-Expression "$gm mogrify -format tif -colorspace gray $imageFile"
+            #Write-Verbose "$(Get-Date -Format u) Converting $imageFile to grayscale TIF for OCR."
+            Invoke-Expression "$using:gm mogrify -format tif -colorspace gray $imageFile"
         }
-        $imageFile = ($path + "\" + $id + ".tif")
-        $imageBase = ($path + "\" + $id)
+        $imageFile = ($using:path + "\" + $id + ".tif")
+        $imageBase = ($using:path + "\" + $id)
         if (Test-Path "$imageFile") {
-            Write-Progress -Activity "Update OCR" -Status "Running Tesseract OCR on TIF" -CurrentOperation "Processing $id, $using:i of $using:total" -PercentComplete ($using:l / $using:total * 100)
-            Write-Verbose "$(Get-Date -Format u) Running OCR on $imageFile."
+            #Write-Progress -Activity "Update OCR" -Status "Running Tesseract OCR on TIF" -CurrentOperation "Processing $id, $i of $total" -PercentComplete ($l / $total * 100)
+            #Write-Verbose "$(Get-Date -Format u) Running OCR on $imageFile."
             Write-Debug "Command: Invoke-Expression $tesseract $imageFile $imageBase txt quiet"
-            Invoke-Expression "$tesseract $imageFile $imageBase txt quiet"
+            Invoke-Expression "$using:tesseract $imageFile $imageBase txt quiet"
+            $imageTxt = ($using:path + "\" + $id + ".txt")
+
+            if (Test-Path "$imageTxt") {
+                #Write-Progress -Activity "Update OCR" -Status "Optimizing TXT for CONTENTdm Indexing" -CurrentOperation "Processing $id, $i of $total" -PercentComplete ($l / $total * 100)
+                #Write-Verbose "$(Get-Date -Format u) Optimizing the OCR for CONTENTdm indexing."
+                Write-Host $imageTxt
+                $saniText = $(Get-Content $imageTxt) | ForEach-Object {
+                    $_ -replace '[^a-zA-Z0-9_.,!?$%#@/\s]' `
+                        -replace '[\u009D]' `
+                        -replace '[\u000C]'
+                }
+                $trimText = $saniText | Where-Object { $_.trim() -ne "" }
+                $ocrText = ($trimText) -join "`n"
+
+                if ($ocrText) {
+                    Write-Host $ocrText
+                    #Write-Verbose "$(Get-Date -Format u) Creating an OCR update entry for $imageBase in metadata object to send to CONTENTdm Catcher."
+                    $csv += [PSCustomObject]@{
+                        dmrecord = $_.dmrecord
+                        $using:field = $ocrText
+                    }
+                    #Write-Verbose "$(Get-Date -Format u) Export metadata CSV for use in Batch Edit."
+                    $csv | Export-CSV $using:path\ocr.csv -Append -NoTypeInformation -Force
+                }
         }
-        $imageTxt = ($path + "\" + $id + ".txt")
-        if (Test-Path "$imageTxt") {
-            Write-Progress -Activity "Update OCR" -Status "Optimizing TXT for CONTENTdm Indexing" -CurrentOperation "Processing $id, $using:i of $using:total" -PercentComplete ($using:l / $using:total * 100)
-            Write-Verbose "$(Get-Date -Format u) Optimizing the OCR for CONTENTdm indexing."
-            (Get-Content $imageTxt) | ForEach-Object {
-                $_ -replace '[^a-zA-Z0-9_.,!?$%#@/\s]' `
-                    -replace '[\u009D]' `
-                    -replace '[\u000C]'
-            } | Where-Object { $_.trim() -ne "" } | Set-Variable -Name ocrText
-        ($ocrText) -join "`n" | Set-Variable -Name ocrText
-        Write-Verbose "$(Get-Date -Format u) Creating an OCR update entry for $imageBase in metadata object to send to CONTENTdm Catcher."
-        $csv += [PSCustomObject]@{
-            dmrecord     = $item.dmrecord
-            $field = $ocrText
-        }
-        Write-Verbose "$(Get-Date -Format u) Export metadata CSV for use in Batch Edit."
-        $csv | Export-CSV $path\ocr.csv -Append -NoTypeInformation -Force
     }
     $l++
-    if (Test-Path $($path + "\" + $id + ".txt")) { $ocrCount++ } else { $nonText++ }
-    Write-Verbose "$(Get-Date -Format u) OCR complete for $id."
-    Write-Progress -Activity "Update OCR" -Status "OCR finishing" -CurrentOperation "Processing $id" -PercentComplete ($l / $total * 100)
+    if (Test-Path $($using:path + "\" + $id + ".txt")) { $script:ocrCount++ } else { $script:nonText++ }
+    #Write-Verbose "$(Get-Date -Format u) OCR complete for $id."
+    #Write-Progress -Activity "Update OCR" -Status "OCR finishing" -CurrentOperation "Processing $id" -PercentComplete ($l / $total * 100)
+} -ThrottleLimit $throttle
+#Write-Verbose "$(Get-Date -Format u) Update-OCR complete. $ocrCount images with text out of $i images processed."
+$Return = [PSCustomObject]@{
+    ocrCount = $script:ocrCount
+    nonText = $script:nonText
 }
-Write-Verbose "$(Get-Date -Format u) Update-OCR complete. $ocrCount images with text out of $i images processed."
-return $ocrCount, $nonText
+$Return
 }

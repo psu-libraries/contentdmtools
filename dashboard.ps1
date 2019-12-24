@@ -2,13 +2,16 @@
 # Nathan Tallman, August 2019.
 # CONTENTdm Tools Dashboard
 
+#Requires -Version 7
+
 # Variables
 $scriptpath = $MyInvocation.MyCommand.Path
 $Global:cdmt_root = Split-Path $scriptpath
+$Cache:cdmt_root = Split-Path $scriptpath
 
 # Import Library
-. .\util\lib.ps1
-Get-Org-Settings
+. $Global:cdmt_root\util\lib.ps1
+Get-Org-Settings | Out-Host
 
 $HomePage = New-UDPage -Name "Home" -Content {
     New-UDLayout -Columns 2 -Content {
@@ -35,14 +38,14 @@ $Settings = New-UDPage -Name "Settings" -Content {
         New-UDInput -Title "Organizational Settings" -Id "orgSettings" -SubmitText "Save" -Content {
             New-UDInputField -Type 'textarea' -Name 'public' -Placeholder 'https://PublicURL.org' -DefaultValue $Global:cdmt_public
             New-UDInputField -Type 'textarea' -Name 'server' -Placeholder 'https://AdminURL.org' -DefaultValue $Global:cdmt_server
-            New-UDInputField -Type 'textbox' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
+            New-UDInputField -Type 'textarea' -Name 'license' -Placeholder 'XXXX-XXXX-XXXX-XXXX' -DefaultValue $Global:cdmt_license
         } -Endpoint {
             Param($public, $server, $license)
             $org = New-Object -TypeName psobject
             $org | Add-Member -MemberType NoteProperty -Name public -Value $public
             $org | Add-Member -MemberType NoteProperty -Name server -Value $server
             $org | Add-Member -MemberType NoteProperty -Name license -Value $license
-            $org | Export-Csv "$Global:cdmt_root\settings\org.csv" -NoTypeInformation
+            $org | Export-Csv "$Cache:cdmt_root\settings\org.csv" -NoTypeInformation
             $Global:cdmt_public = $public
             $Global:cdmt_server = $server
             $Global:cdmt_license = $license
@@ -58,40 +61,43 @@ $Settings = New-UDPage -Name "Settings" -Content {
             Param($user, $password, $throttle, $staging)
             # Still need to update batchEdit to use these settings and see if the password actually works!
             $SecurePassword = $($password | ConvertTo-SecureString -AsPlainText -Force)
-            if (Test-Path "$Global:cdmt_root\settings\user.csv") {
-                $usrcsv = Import-Csv "$Global:cdmt_root\settings\user.csv"
+            Set-Variable -Name userdata -Value "$Cache:cdmt_root\settings\user.csv"
+            if (Test-Path $userdata) {
+                $usrcsv = Import-Csv "$userdata"
                 if ($usrcsv.user -eq "$user") {
-                    $usrcsv = Import-Csv "$Global:cdmt_root\settings\user.csv"
+                    $usrcsv = Import-Csv "$userdata"
                     $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
-                        $_.password = $SecurePassword | ConvertFrom-SecureString
+                        $_.password = $($SecurePassword | ConvertFrom-SecureString)
                     }
-                    $usrcsv | Export-Csv -Path "$Global:cdmt_root\settings\user.csv" -NoTypeInformation
+                    $usrcsv | Export-Csv -Path "$userdata" -NoTypeInformation
                     New-UDInputAction -Content @(
-                        New-UDCard -Title "User Settings" -Text "Existing User Updated: $user`r`n$x"
+                        New-UDCard -Title "User Settings" -Text "Existing User Updated: $user`r`n$x`r`n$userdata"
                     )
                 }
                 else {
                     [pscustomobject]@{
                         user     = "$user"
-                        password = $SecurePassword | ConvertFrom-SecureString
-                    } | Export-Csv -Path  "$Global:cdmt_root\settings\user.csv" -Append -NoTypeInformation
+                        password = $($SecurePassword | ConvertFrom-SecureString)
+                    } | Export-Csv -Path "$userdata" -Append -NoTypeInformation
                     New-UDInputAction -Content @(
-                        New-UDCard -Title "User Settings" -Text "New User Added: $user`r`n"
+                        New-UDCard -Title "User Settings" -Text "New User Added: $user"
                     )
                 }
             }
             else {
                 [pscustomobject]@{
                     user     = "$user"
-                    password = $SecurePassword | ConvertFrom-SecureString
-                } | Export-Csv -Path "$Global:cdmt_root\settings\user.csv" -Append -NoTypeInformation
+                    password = $($SecurePassword | ConvertFrom-SecureString)
+                } | Export-Csv -Path $userdata -Append -NoTypeInformation
                 New-UDInputAction -Content @(
-                    New-UDCard -Title "User Settings" -Text "New User Saved: $user`r`n"
+                    New-UDCard -Title "User Settings" -Text "User data file created at $userdata.`r`nNew User Saved: $user"
                 )
             }
         }
     }
 }
+
+
 
 $Batch = New-UDPage -Name "Batches" -Content {
     New-UDLayout -Columns 1 -Content {
@@ -160,8 +166,9 @@ $Batch = New-UDPage -Name "Batches" -Content {
             New-UDInputField -Type 'select' -Name 'ocrengine' -Placeholder "OCR Engine" -Values @("ABBYY", "tesseract") -DefaultValue "ABBYY"
         } -Endpoint {
             Param($collection, $field, $public, $server, $license, $path, $user, $throttle, $method, $ocrengine)
-            $scriptblock = "$cdmt_root\batchOCR.ps1 -collection $collection -field $field -public $public -server $server -license $license -path $path -user $user -throttle $throttle -method $method -ocrengine $ocrengine"
-            Start-Process PowerShell.exe -ArgumentList "-NoExit -WindowStyle Maximized -ExecutionPolicy ByPass -Command $scriptblock"
+            $scriptblock = "$Cache:cdmt_root\batchOCR.ps1 -collection $collection -field $field -public $public -server $server -license $license -path $path -user $user -throttle $throttle -method $method -ocrengine $ocrengine"
+            #Start-Process PowerShell.exe -ArgumentList "-NoExit -WindowStyle Maximized -ExecutionPolicy ByPass -Command $scriptblock"
+            Start-Process pwsh.exe -ArgumentList "-NoExit -ExecutionPolicy ByPass -Command $scriptblock"
             New-UDInputAction -Content @(
                 New-UDCard -Title "Batch OCR a Collection" -Text "`nBatch OCR has started in a new PowerShell window, you should see running output there. When it's complete, a brief report that includes the path to a log file containing the all output will be shown and you can close the window.`r`n
                 You can also close the window at any time to halt the batch.`n
@@ -190,39 +197,34 @@ $Batch = New-UDPage -Name "Batches" -Content {
         } -Endpoint {
             Param($user, $server, $collection, $path)
             Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
-            if (Test-Path $cdmt_root\settings\user.csv) {
-                $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+            if (Test-Path "$Cache:cdmt_root\settings\user.csv") {
+                $usrcsv = $(Resolve-Path $Cache:cdmt_root\settings\user.csv)
                 $usrcsv = Import-Csv $usrcsv
                 $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
                     $SecurePassword = $_.password | ConvertTo-SecureString
                     $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
-                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $pair = "$($user):$([System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR))"
+                    $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+                    $basicAuthValue = "Basic $encodedCreds"
+                    $Headers = @{
+                        Authorization = $basicAuthValue
+                    }
+                    Invoke-WebRequest "$server/cgi-bin/admin/export.exe?CISODB=/$collection&CISOOP=ascii&CISOMODE=1&CISOPTRLIST=" -Headers $Headers | Out-Null
+                    Invoke-RestMethod "$server/cgi-bin/admin/getfile.exe?CISOMODE=1&CISOFILE=/$collection/index/description/export.txt" -Headers $Headers -OutFile "$path\$collection.txt"
+                    New-UDInputAction -Toast "Collection metadata exported to $path\$collection.txt." -Duration 5000
                     $null = $BSTR
                 }
                 if ("$user" -notin $usrcsv.user) {
-                    Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
-                    [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
-                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
-                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-                    $null = $BSTR
+                    New-UDInputAction -Content @(
+                        New-UDCard -Title "Export Collection Metadata" -Text "No password saved for $user. Please use the Settings page to save one."
+                    )
                 }
             }
             Else {
-                Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
-                [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
-                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
-                $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-                $null = $BSTR
+                New-UDInputAction -Content @(
+                    New-UDCard -Title "Export Collection Metadata" -Text "User data file created at $userdata.`r`nNew User Saved: $user"
+                )
             }
-            $pair = "$($user):$($pw)"
-            $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
-            $basicAuthValue = "Basic $encodedCreds"
-            $Headers = @{
-                Authorization = $basicAuthValue
-            }
-            Invoke-WebRequest "$server/cgi-bin/admin/export.exe?CISODB=/$collection&CISOOP=ascii&CISOMODE=1&CISOPTRLIST=" -Headers $Headers | Out-Null
-            Invoke-RestMethod "$server/cgi-bin/admin/getfile.exe?CISOMODE=1&CISOFILE=/$collection/index/description/export.txt" -Headers $Headers -OutFile "$path\$collection.txt"
-            New-UDInputAction -Toast "Collection metadata exported to $path\$collection.txt." -Duration 5000
         }
 
         New-UDInput -Title "Unlock Collection Metadata" -Id "unlockCollectionMetadata" -SubmitText "Unlock" -Content {
@@ -232,38 +234,34 @@ $Batch = New-UDPage -Name "Batches" -Content {
         } -Endpoint {
             Param($user, $server, $collection)
             Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
-            if (Test-Path $cdmt_root\settings\user.csv) {
-                $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+            if (Test-Path "$Cache:cdmt_root\settings\user.csv") {
+                $usrcsv = $(Resolve-Path $Cache:cdmt_root\settings\user.csv)
                 $usrcsv = Import-Csv $usrcsv
                 $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
                     $SecurePassword = $_.password | ConvertTo-SecureString
                     $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
-                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $pair = "$($user):$([System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR))"
+                    $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+                    $basicAuthValue = "Basic $encodedCreds"
+                    $Headers = @{
+                        Authorization = $basicAuthValue
+                    }
+                    Invoke-WebRequest "$server/cgi-bin/admin/unlocksubset.exe?CISODB=/$collection&CISOPTRLIST=all&CISOMODE=1" -Headers $Headers | Out-Null
+                    New-UDInputAction -Toast "$collection metadata unlocked." -Duration 5000
                     $null = $BSTR
                 }
                 if ("$user" -notin $usrcsv.user) {
-                    Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
-                    [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
-                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
-                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-                    $null = $BSTR
+                    New-UDInputAction -Content @(
+                        New-UDCard -Title "Unlock Collection Metadata" -Text "No password saved for $user. Please use the Settings page to save one."
+                    )
                 }
             }
             Else {
-                Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
-                [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
-                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
-                $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-                $null = $BSTR
+                New-UDInputAction -Content @(
+                    New-UDCard -Title "Unlock Collection Metadata" -Text "No user data file has been created. Please use the Settings page to save a password saved for $user."
+                )
             }
-            $pair = "$($user):$($pw)"
-            $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
-            $basicAuthValue = "Basic $encodedCreds"
-            $Headers = @{
-                Authorization = $basicAuthValue
-            }
-            Invoke-WebRequest "$server/cgi-bin/admin/unlocksubset.exe?CISODB=/$collection&CISOPTRLIST=all&CISOMODE=1" -Headers $Headers | Out-Null
-            New-UDInputAction -Toast "$collection metadata unlocked." -Duration 5000
+
         }
 
         New-UDInput -Title "Index Collection Metadata" -Id "indexCollectionMetadata" -SubmitText "Index" -Content {
@@ -273,39 +271,35 @@ $Batch = New-UDPage -Name "Batches" -Content {
         } -Endpoint {
             Param($user, $server, $collection)
             Write-Debug "Test for existing user credentials; if they exist use the, if they don't prompt for a password. "
-            if (Test-Path $cdmt_root\settings\user.csv) {
-                $usrcsv = $(Resolve-Path $cdmt_root\settings\user.csv)
+            if (Test-Path "$Cache:cdmt_root\settings\user.csv") {
+                $usrcsv = $(Resolve-Path $Cache:cdmt_root\settings\user.csv)
                 $usrcsv = Import-Csv $usrcsv
                 $usrcsv | Where-Object { $_.user -eq "$user" } | ForEach-Object {
                     $SecurePassword = $_.password | ConvertTo-SecureString
                     $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePassword)
-                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    $pair = "$($user):$([System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR))"
+                    $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+                    $basicAuthValue = "Basic $encodedCreds"
+                    $Headers = @{
+                        Authorization = $basicAuthValue
+                    }
+                    Invoke-WebRequest "$server/cgi-bin/admin/putsched.exe?CISODB=/$collection&CISOOP=index&CISOTYPE1=now" -Headers $Headers | Out-Null
+                    New-UDInputAction -Toast "$collection is currently indexing." -Duration 5000
+                    New-UDLink -Text "CONTENTdm Admin UI" -Url "$server/cgi-bin/admin/bld.exe?CISODB=/$collection"
                     $null = $BSTR
                 }
                 if ("$user" -notin $usrcsv.user) {
-                    Write-Output "No user settings found for $user. Enter a password below or store secure credentials using the dashboard."
-                    [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
-                    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
-                    $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-                    $null = $BSTR
+                    New-UDInputAction -Content @(
+                        New-UDCard -Title "Index Collection Metadata" -Text "No password saved for $user. Please use the Settings page to save one."
+                    )
                 }
             }
             Else {
-                Write-Output "No user settings file found. Enter a password below or store secure credentials using the dashboard."
-                [SecureString]$password = Read-Host "Enter $user's CONTENTdm password" -AsSecureString
-                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR([SecureString]$password)
-                $pw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-                $null = $BSTR
+                New-UDInputAction -Content @(
+                    New-UDCard -Title "Index Collection Metadata" -Text "No user data file has been created. Please use the Settings page to save a password saved for $user."
+                )
             }
-            $pair = "$($user):$($pw)"
-            $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
-            $basicAuthValue = "Basic $encodedCreds"
-            $Headers = @{
-                Authorization = $basicAuthValue
-            }
-            Invoke-WebRequest "$server/cgi-bin/admin/putsched.exe?CISODB=/$collection&CISOOP=index&CISOTYPE1=now" -Headers $Headers | Out-Null
-            New-UDInputAction -Toast "$collection is currently indexing." -Duration 5000
-            New-UDLink -Text "CONTENTdm Admin UI" -Url "$server/cgi-bin/admin/bld.exe?CISODB=/$collection"
+
         }
     }
 

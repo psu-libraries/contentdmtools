@@ -104,7 +104,7 @@ Write-Output "User:`t`t`t$user" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Throttle:`t`t$throttle" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "Method:`t`t`t$method" | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "OCR Engine:`t`t$ocrengine" | Tee-Object -FilePath $log_batchOCR -Append
-Write-Output ("Executed Command:`t" + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
+Write-Output ("Executed Command: " + $MyInvocation.Line) | Tee-Object -FilePath $log_batchOCR -Append
 Write-Output "----------------------------------------------" | Tee-Object -FilePath $log_batchOCR -Append
 
 try { Test-Path $path | Out-Null }
@@ -114,7 +114,7 @@ catch {
 }
 
 $path = "$path\tmp"
-if (Test-Path $path) { Remove-Item $path -Recurse -Force | Out-Null }
+#if (Test-Path $path) { Remove-Item $path -Recurse -Force | Out-Null }
 if (!(Test-Path $path)) { New-Item -ItemType Directory -Path $path | Out-Null }
 
 # Read in the stored org settings to use if no server or license parameters were supplied.
@@ -173,8 +173,8 @@ switch ($ocrengine) {
     tesseract {
         Write-Output "`r`n$(. Get-TimeStamp) Running Tesseract OCR on images. This really cranks up your CPU and you may occassionally see warning messages from Tesseract, e.g. box not within image. Usually nothing to worry about, just don't set your throttle past the maximum number of logical processors on this computer.`r`n$(. Get-TimeStamp) Sometimes Tesseract can take a long time on complex images. If it looks like Batch OCR is stuck, give it more time and see if the batch completes. Large collections and complex images sometimes take longer and the terminal display will sometimes not update. OCRing...`r`n" | Tee-Object -FilePath $log_batchOCR -Append
         $return = . Update-OCR -path $path -throttle $throttle -collection $collection -field $field -gm $gm -tesseract $tesseract -method $method | Tee-Object -FilePath $log_batchOCR -Append
-        $ocrCount = $return[0]
-        $nonText = $return[1]
+        $ocrCount = $return.ocrCount
+        $nonText = $return.nonText
     }
     ABBYY {
         $return = . Update-OCR-ABBYY -path $path -throttle $throttle -collection $collection -field $field -method $method -log $log_batchOCR
@@ -212,7 +212,7 @@ $ScriptBlock = {
 Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $cdmt_root, $collection, $server, $license, $path, $user 2>&1 | Tee-Object -FilePath $log_batchOCR -Append
 
 # Cleanup the tmp files
-Remove-Item $path -Recurse -Force | Tee-Object -FilePath $log_batchOCR -Append
+# Remove-Item $path -Recurse -Force | Tee-Object -FilePath $log_batchOCR -Append
 
 $end = Get-Date
 $runtime = New-TimeSpan -Start $start -End $end
