@@ -6,9 +6,27 @@
 $scriptpath = $MyInvocation.MyCommand.Path
 $cdmt_root = Split-Path $scriptpath
 
-# Import Library
-. $cdmt_root\util\lib.ps1
-. Get-Org-Settings
+function Get-Org-Settings {
+      Write-Verbose "Get-Org-Settings checking for stored settings."
+      $Return = @{ }
+      if (Test-Path settings\org.csv) {
+          $orgcsv = $(Resolve-Path settings\org.csv)
+          $orgcsv = Import-Csv settings\org.csv
+          foreach ($org in $orgcsv) {
+              Write-Verbose ("Public URL: " + $org.public)
+              $Return.public = $org.public
+              Write-Verbose ("Server URL: " + $org.server)
+              $Return.server = $org.server
+              Write-Verbose ("License: " + $org.license)
+              $Return.license = $org.license
+              $Global:cdmt_public = $org.public
+              $Global:cdmt_server = $org.server
+              $Global:cdmt_license = $org.license
+          }
+      }
+  }
+
+Get-Org-Settings
 
 $HomePage = New-UDPage -Name "Home" -Content {
     New-UDLayout -Columns 2 -Content {
