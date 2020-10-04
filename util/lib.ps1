@@ -307,12 +307,8 @@ function Split-Object-Metadata {
     if ("Level" -in $SourceHeadersTrimmed) {
         $csv | Select-Object * -ExcludeProperty "File Name" | Where-Object { $_.Level -eq "Item" } | Select-Object *, "File Name" -Exclude Level | Export-Csv -Delimiter `t -Path $path\itemMetadata.txt -NoTypeInformation
 
-        $csv | Where-Object { $_.Level -eq "Item" } | ForEach-Object { if (!(Test-Path $path\items)) { New-Item -ItemType Directory -Path $path\items | Out-Null } }
+        #$csv | Where-Object { $_.Level -eq "Item" } | ForEach-Object { if (!(Test-Path $path\items)) { New-Item -ItemType Directory -Path $path\items | Out-Null } }
     }
-
-
-
-
 
     # Export tab-d compound object metadata files, with object-level metadata.
     # Strip Directory and Level columns if present.
@@ -321,7 +317,8 @@ function Split-Object-Metadata {
     $objects = $csv | Group-Object -AsHashTable -AsString -Property Directory
     ForEach ($object in $objects.keys) {
         if (!(Test-Path $path\$object)) { New-Item -ItemType Directory -Path $path\$object | Out-Null }
-        $objects.$object | Select-Object * -ExcludeProperty "File Name" | Select-Object *, "File Name" -ExcludeProperty Directory, Level | Export-Csv -Delimiter `t -Path $path\$object\$object.txt -NoTypeInformation
+        #$objects.$object | Select-Object * -ExcludeProperty "File Name" | Select-Object *, "File Name" -ExcludeProperty Directory, Level | Export-Csv -Delimiter `t -Path $path\$object\$object.txt -NoTypeInformation
+        $objects.$object | Select-Object * -ExcludeProperty Directory, Level | Export-Csv -Delimiter `t -Path $path\$object\$object.txt -NoTypeInformation
     }
     Write-Verbose "$(. Get-TimeStamp) Split-Object-Metadata complete"
 }
@@ -977,8 +974,10 @@ function Get-Images-Using-API {
     Write-Verbose "$(Get-TimeStamp) Get-Images-Using-API starting for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"
 }
 
+
 #IIIF for images. Test different size tifs for smaller and quicker files, eg /full/2000, /0/default.jpg
 # Not working as of 2019-08-23, still working on getting URI and ID paired together for downloading...
+
 function Get-Images-Using-IIIF {
     <#
 	    .SYNOPSIS
@@ -1078,6 +1077,7 @@ function Get-Images-Using-IIIF {
     Write-Output "$(Get-TimeStamp) Get-Images-Using-IIIF complete for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"
     Write-Verbose "$(Get-TimeStamp) Get-Images-Using-IIIF complete for $collection. [Runtime: $(New-TimeSpan -Start $startTime -End $endTime)]"
 }
+
 
 function Update-OCR-ABBYY {
     [cmdletbinding()]
@@ -1276,36 +1276,38 @@ function Convert-to-JP2 {
     Write-Verbose "Convert-to-JP2 starting for $object"
     $files = Get-ChildItem *.tif* -Path $path\$object
     $total = (Get-ChildItem *.tif* -Path $path\$object).Count
-
+<#
     if ($object -in $items) {
         $out = "$path\items"
     }
     else {
         $out = "$path\$object\scans"
 
-    }
+    } #>
 
-    $files | ForEach-Object -Parallel -ThrottleLimit $throttle {
-        $basefilename = $file.Basename
-        $fullfilename = $file.Fullname
-        $sourceICC = ($path + "\" + $object + "\" + "source_" + $basefilename + ".icc")
+    $out = "$path\$object\scans"
+
+    $files | ForEach-Object -Parallel {
+        $basefilename = $_.Basename
+        $fullfilename = $_.Fullname
+        $sourceICC = "$fullfilename.icc"
         Write-Verbose "Extracting color profile for $basefilename using GraphicsMagick"
-        Invoke-Expression "$gm convert $fullfilename $sourceICC" 2>&1 | Tee-Object -file $log -Append
+        Invoke-Expression "$using:gm convert $fullfilename $sourceICC" 2>&1  | Tee-Object -file $using:log -Append
         Write-Verbose "Converting $basefilename to JP2 using souce color profile, if present."
-        if ((Get-Item $sourceICC).length -gt 0) {
-            Write-Verbose "Invoke-Expression $gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $out\$basefilename.jp2"
-            Invoke-Expression "$gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $adobe $out\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
+        if (($sourceICC) -or (Get-Item $sourceICC).length -gt 0) {
+            Write-Verbose "Invoke-Expression $using:gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $using:adobe $using:out\$basefilename.jp2"
+            Invoke-Expression "$using:gm convert $fullfilename -profile $sourceICC -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 -profile $using:adobe $using:out\$basefilename.jp2" 2>&1  | Tee-Object -file $using:log -Append
             Write-Verbose "Delete source color profile"
             Remove-Item $sourceICC
         }
         else {
-            Write-Verbose "Invoke-Expression $gm convert $fullfilename -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 $out\$basefilename.jp2"
-            Invoke-Expression "$gm convert $fullfilename -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 $out\$basefilename.jp2" 2>&1 | Tee-Object -file $log -Append
+            Write-Verbose "Invoke-Expression $using:gm convert $fullfilename -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 $using:out\$basefilename.jp2"
+            Invoke-Expression "$using:gm convert $fullfilename -intent Absolute -flatten -quality 85 -define jp2:prg=rlcp -define jp2:numrlvls=7 -define jp2:tilewidth=1024 -define jp2:tileheight=1024 $using:out\$basefilename.jp2" 2>&1 | Tee-Object -file $using:log -Append
             Write-Verbose "Delete source color profile" # May exist as zero-byte file
             Remove-Item $sourceICC
         }
-        $jp2s = (Get-ChildItem -Path $path\$object -Filter "*.jp2" -Recurse).Count
-        Write-Progress -Activity "Batch Create Compound objects" -Status "Converting $file to JP2" -CurrentOperation "$jp2s/$total TIFs converted to JP2" -PercentComplete ($jp2s/$total * 100)
+        $jp2s = (Get-ChildItem -Path $using:path\$using:object -Filter "*.jp2" -Recurse).Count
+        Write-Progress -Activity "Batch Create Compound objects" -Status "Converting $_ to JP2" -CurrentOperation "$jp2s/$using:total TIFs converted to JP2" -PercentComplete ($jp2s/$using:total * 100)
     }
     Write-Verbose "Convert-to-JP2 complete for $object"
 }
@@ -1338,10 +1340,10 @@ function Convert-to-Text-And-PDF {
         $tesseract
     )
     Write-Verbose "Convert-to-Text-And-PDF starting for $object"
-    Get-ChildItem -Path $path\$object -Filter *.tif* | ForEach-Object -Parallel -ThrottleLimit $throttle {
-        $basefilename = $file.BaseName
+    Get-ChildItem -Path $path\$object -Filter *.tif* | ForEach-Object -Parallel {
+        $basefilename = $_.BaseName
         Write-Verbose "Run Tesseract on $basefilename to generate TXT and PDF"
-        Invoke-Expression "$tesseract $path\$object\$file $path\$object\transcripts\$basefilename txt pdf quiet" 2>&1 | Tee-Object -FilePath $log -Append
+        Invoke-Expression "$using:tesseract $_ $using:path\$using:object\transcripts\$basefilename txt pdf quiet" 2>&1 | Tee-Object -FilePath $using:log -Append
     }
     Write-Verbose "Convert-to-Text-And-PDF complete for $object"
 }
@@ -1374,18 +1376,18 @@ function Convert-to-Text {
         $tesseract
     )
     Write-Verbose "Convert-to-Text starting for $object"
-    Get-ChildItem -Path $path\$object -Filter *.tif* | ForEach-Object -Parallel -ThrottleLimit {
-        $basefilename = $file.BaseName
-        $fullfilename = $file.FullName
+    Get-ChildItem -Path $path\$object -Filter *.tif* | ForEach-Object -Parallel {
+        $basefilename = $_.BaseName
+        $fullfilename = $_.FullName
         $tmp = ($basefilename + "_ocr.tif")
-        $fulltmp = "$path\$object\$tmp"
+        $fulltmp = "$using:path\$using:object\$tmp"
         Write-Verbose "Copy TIFs to a temporary directory"
-        Copy-Item -Path $fullfilename -Destination $path\$object\$tmp
+        Copy-Item -Path $fullfilename -Destination $fulltmp
         Write-Verbose "Convert TIF to grayscale TIF for OCR using GraphicsMagick"
-        Invoke-Expression "$gm mogrify -format tif -colorspace gray $fulltmp" 2>&1 | Tee-Object -FilePath $log -Append
+        Invoke-Expression "$using:gm mogrify -format tif -colorspace gray $fulltmp" 2>&1 | Tee-Object -FilePath $using:log -Append
         Write-Verbose "Convert grayscale TIF to TXT using Tesseract"
-        Invoke-Expression "$tesseract $path\$object\$tmp $path\$object\transcripts\$basefilename txt quiet" 2>&1 | Tee-Object -FilePath $log -Append
-        Remove-Item "$path\$object\$tmp"
+        Invoke-Expression "$using:tesseract $fulltmp $using:path\$using:object\transcripts\$basefilename txt quiet" 2>&1 | Tee-Object -FilePath $using:log -Append
+        Remove-Item $fulltmp
     }
     Write-Verbose "Convert-to-Text complete for $object"
 }
@@ -1418,10 +1420,10 @@ function Convert-to-PDF {
         $tesseract
     )
     Write-Verbose "Convert-to-PDF starting for $object"
-    Get-ChildItem -Path $path\$object -Filter *.tif* | Foreach-Object -Parallel -ThrottleLimit $throttle {
-        $basefilename = $file.BaseName
+    Get-ChildItem -Path $path\$object -Filter *.tif* | Foreach-Object -Parallel {
+        $basefilename = $_.BaseName
         Write-Verbose "Convert TIFs to PDF using Tesseract"
-        Invoke-Expression "$tesseract $path\$object\$file $path\$object\transcripts\$basefilename pdf quiet" -ErrorAction SilentlyContinue
+        Invoke-Expression "$using:tesseract $_ $using:path\$using:object\transcripts\$basefilename pdf quiet" -ErrorAction SilentlyContinue
     }
     Write-Verbose "Convert-to-PDF complete for $object"
 }
@@ -1451,10 +1453,10 @@ function Copy-TIF-ABBYY {
     )
     Write-Verbose "Copy-TIF-ABBYY starting for $object"
     Write-Verbose "Parallel copy TIFs to ABBYY staging."
-    Get-ChildItem -Path $path\$object -Filter *.tif* | ForEach-Object -Parallel -ThrottleLimit $throttle {
-        Copy-Item -Path $file.FullName -Destination $abbyy_staging\$object  2>&1 | Tee-Object -file $log -Append
+    Get-ChildItem -Path $path\$object -Filter *.tif* | ForEach-Object -Parallel  {
+        Copy-Item -Path $_.FullName -Destination $using:abbyy_staging\$using:object  2>&1 | Tee-Object -file $using:log -Append
     }
-    Write-Verbose "Copy-TIF-ABBYY complete for $object"
+    Write-Verbose "Copy-TIF-ABBYY complete for $using:object"
 }
 
 function Update-OCR {
@@ -1512,7 +1514,7 @@ function Update-OCR {
     $items = Import-Csv -Path "$path\items.csv"
     $total = ($items | Measure-Object).Count
     Write-Verbose "$(Get-Date -Format u) $total Images to process. Starting parallel loop with throttle set to $throttle."
-    $i = 0
+    #$i = 0
     $l = 0
     $items | ForEach-Object -Parallel {
         #$i++
@@ -1530,7 +1532,7 @@ function Update-OCR {
         if (Test-Path "$imageFile") {
             #Write-Progress -Activity "Update OCR" -Status "Running Tesseract OCR on TIF" -CurrentOperation "Processing $id, $i of $total" -PercentComplete ($l / $total * 100)
             #Write-Verbose "$(Get-Date -Format u) Running OCR on $imageFile."
-            Write-Debug "Command: Invoke-Expression $tesseract $imageFile $imageBase txt quiet"
+            Write-Debug "Command: Invoke-Expression $using:tesseract $imageFile $imageBase txt quiet"
             Invoke-Expression "$using:tesseract $imageFile $imageBase txt quiet"
             $imageTxt = ($using:path + "\" + $id + ".txt")
 
@@ -1562,7 +1564,7 @@ function Update-OCR {
     if (Test-Path $($using:path + "\" + $id + ".txt")) { $script:ocrCount++ } else { $script:nonText++ }
     #Write-Verbose "$(Get-Date -Format u) OCR complete for $id."
     #Write-Progress -Activity "Update OCR" -Status "OCR finishing" -CurrentOperation "Processing $id" -PercentComplete ($l / $total * 100)
-} -ThrottleLimit $throttle
+}
 #Write-Verbose "$(Get-Date -Format u) Update-OCR complete. $ocrCount images with text out of $i images processed."
 $Return = [PSCustomObject]@{
     ocrCount = $script:ocrCount

@@ -118,15 +118,18 @@ ForEach ($record in $csv) {
             $objects += $record.Directory
         }
     }
-    $object = "$($record.Directory)"
+}
+
+ForEach ($object in $objects) {
+    #$object = "$($object.Directory)"
     $o++
-    $percent = ($o / $csv.Count) * 100
-    Write-Progress -Activity "Batch Create" -Status "Processing resources in $metadata"  -CurrentOperation "Processing $object, $o of $($csv.Count)" -PercentComplete $percent
-    Write-Output "$(. Get-TimeStamp) Starting $object ($o of $($csv.Count) resources)." | Tee-Object -file $log_batchCreate -Append
-    
+    $percent = ($o / $objects.Count) * 100
+    Write-Progress -Activity "Batch Create" -Status "Processing objects in $metadata"  -CurrentOperation "Processing $object, $o of $($objects.Count)" -PercentComplete $percent
+    Write-Output "$(. Get-TimeStamp) Starting $object ($o of $($objects.Count) resources)." | Tee-Object -file $log_batchCreate -Append
+
     Write-Verbose "$(. Get-TimeStamp) [$object] Check for the presence of redacted TIF files and separate according to value of originals parameter."
     $redacted = & Find-Redacted-Filesets -path $path\$object
-      
+
     if ($null -ne $redacted.redacted) {
         Write-Verbose "Redacted Files:"
         Write-Verbose $redacted.redacted
@@ -150,24 +153,26 @@ ForEach ($record in $csv) {
     }
 
     $tiffs = (Get-ChildItem *.tif* -Path $path\$object).Count
+
     if ($jp2 -eq "true") {
         Write-Verbose "$(. Get-TimeStamp) [$object] Finding TIF files, converting them to JP2. Item JP2s are saved in the items directory, object JP2s are saved in a scans object subdirectory. TIFs larger than 8000 pixels will be reduced in size before conversion."
 
         # Find and reduce TIFs with edges over 8000 pixels.
-        Get-ChildItem -Path $path\$object -Filter "*.tif*" | ForEach-Object {
-            $image = New-Object -ComObject Wia.ImageFile         
+        Get-ChildItem -Path $path\$object -Filter "*.tif*" | ForEach-Object -Parallel {
+            $image = New-Object -ComObject Wia.ImageFile
             $image.LoadFile($_.FullName)
             If (($image.Width -gt 8000) -or ($image.Height -gt 8000)) {
                 Write-Verbose "Reducing $_"
                 $name = $_.BaseName
                 $reduced = ($name + "_reduced" + $_.Extension)
                 $original = $_.FullName
-                Invoke-Expression "$gm convert -resize 8000x8000> $original $path\$object\$reduced"
-                if (!(Test-Path $path\$object\originals)) { New-Item -ItemType Directory -Path $path\$object\originals | Out-Null }
-                Move-Item -Path $_.Fullname -Destination $path\$object\originals\
+                Invoke-Expression "$using:gm convert -resize 8000x8000> $original $using:path\$using:object\$reduced"
+                if (!(Test-Path $using:path\$using:object\originals)) { New-Item -ItemType Directory -Path $using:path\$using:object\originals | Out-Null }
+                Move-Item -Path $_.Fullname -Destination $using:path\$using:object\originals\
+                Rename-Item -Path $using:path\$using:object\$reduced -NewName $_
             }
         }
-        
+
         Write-Output "        JP2 conversion starting: $tiffs TIF." | Tee-Object -file $log_batchCreate -Append
         if (!(Test-Path $path\$object\scans)) { New-Item -ItemType Directory -Path $path\$object\scans | Out-Null }
         & Convert-to-JP2 -path $path -object $object -items $items -throttle $throttle -log $log_batchCreate -gm $gm -adobe $adobe
@@ -202,7 +207,7 @@ ForEach ($record in $csv) {
         Write-Verbose "$(. Get-TimeStamp) [$object] JP2 processing set to skip."
     }
 
-    # Append item metadata to metadata.txt
+    <#     # Append item metadata to metadata.txt
     if ($record.Level -eq "Item") {
         Write-Verbose "$(. Get-TimeStamp) [$object] Update tab-d item metadata file with JP2 file name of each item."
         Write-Output "        Deriving item file names and adding to tab-d item metadata file." | Tee-Object -file $log_batchCreate -Append
@@ -222,70 +227,63 @@ ForEach ($record in $csv) {
         Write-Verbose "$(. Get-TimeStamp) [$object] Scan JP2s in object directory and derive item-level metadata, appending it to tab-d compound object metadata file."
         Write-Output "        Deriving item-level metadata and adding it to the tab-d compound-object object metadata file." | Tee-Object -file $log_batchCreate -Append
         & Convert-Item-Metadata -path $path -object $object | Tee-Object -file $log_batchCreate -Append
-    }
+    } #>
 
     # OCR, TXT and PDF
     if ($ocr -eq "both") {
-        if (!($record.Level -eq "Item")) {
-            Write-Verbose "$(. Get-TimeStamp) [$object] Converting TIF to TXT and PDF using $ocrengine. Item-level TXT will be saved in a transcripts subdirectory, object-level PDF will be saved in object directory."
-            Write-Output "        OCR starting (PDF and TXT output)." | Tee-Object -file $log_batchCreate -Append
-            if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
-            if ($ocrengine -eq "ABBYY") {
-                & Convert-to-Text-And-PDF-ABBYY -path $path -object $object -pdftk $pdftk 2>&1 | Tee-Object -file $log_batchCreate -Append
-            }
-            elseif ($ocrengine -eq "tesseract") {
-                & Convert-to-Text-And-PDF -path $path -object $object -throttle $throttle -log $log_batchCreate -tesseract $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
-                & Merge-PDF -path $path -object $object -pdfs transcripts -log $log_batchCreate -gs $gs 2>&1 | Tee-Object -file $log_batchCreate -Append
-
-            }
-            Write-Verbose "Optize TXT for CONTENTdm indexing"
-            Get-ChildItem -Path $path\$object\transcripts *.txt -Recurse | ForEach-Object {
-                & Optimize-OCR -ocrText $_.FullName | Out-Null
-            }
-            $txts = (Get-ChildItem *.txt -Path $path\$object\transcripts -Recurse).Count
-            $pdfs = (Get-ChildItem *.pdf -Path $path\$object -Recurse).Count
-            Write-Output "        OCR complete: $tiffs TIFs, $txts TXTs, and $pdfs PDF. $(. Get-TimeStamp)" | Tee-Object -file $log_batchCreate -Append
+        Write-Verbose "$(. Get-TimeStamp) [$object] Converting TIF to TXT and PDF using $ocrengine. Item-level TXT will be saved in a transcripts subdirectory, object-level PDF will be saved in object directory."
+        Write-Output "        OCR starting (PDF and TXT output)." | Tee-Object -file $log_batchCreate -Append
+        if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
+        if ($ocrengine -eq "ABBYY") {
+            & Convert-to-Text-And-PDF-ABBYY -path $path -object $object -pdftk $pdftk 2>&1 | Tee-Object -file $log_batchCreate -Append
         }
-        else { }
+        elseif ($ocrengine -eq "tesseract") {
+            & Convert-to-Text-And-PDF -path $path -object $object -throttle $throttle -log $log_batchCreate -tesseract $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
+            & Merge-PDF -path $path -object $object -pdfs transcripts -log $log_batchCreate -gs $gs 2>&1 | Tee-Object -file $log_batchCreate -Append
+
+        }
+        Write-Verbose "Optize TXT for CONTENTdm indexing"
+        Get-ChildItem -Path $path\$object\transcripts *.txt -Recurse | ForEach-Object {
+            & Optimize-OCR -ocrText $_.FullName | Out-Null
+        }
+        $txts = (Get-ChildItem *.txt -Path $path\$object\transcripts -Recurse).Count
+        $pdfs = (Get-ChildItem *.pdf -Path $path\$object -Recurse).Count
+        Write-Output "        OCR complete: $tiffs TIFs, $txts TXTs, and $pdfs PDF. $(. Get-TimeStamp)" | Tee-Object -file $log_batchCreate -Append
     }
     elseif ($ocr -eq "text") {
-        if (!($record.Level -eq "Item")) {
-            Write-Verbose "$(. Get-TimeStamp) [$object] Converting TIF to TXT using $ocrengine. Item-level TXT will be saved in a transcripts subdirectory."
-            Write-Output "        OCR starting (TXT output)." | Tee-Object -file $log_batchCreate -Append
-            if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
-            if ($ocrengine -eq "ABBYY") {
-                & Convert-to-Text-ABBYY -path $path -object $object -throttle $throttle -log $log_batchCreate
-            }
-            elseif ($ocrengine -eq "tesseract") {
-                & Convert-to-Text -path $path -object $object -throttle $throttle -log $log_batchCreate -gm $gm -tesseract $tesseract
-            }
-            Get-ChildItem -Path $path\$object\transcripts *.txt -Recurse | ForEach-Object {
-                & Optimize-OCR -ocrText $_.FullName | Out-Null
-            }
-            $tiffs = (Get-ChildItem *.tif* -Path $path\$object  -Recurse).Count
-            $txts = (Get-ChildItem *.txt -Path $path\$object\transcripts -Recurse).Count
-            Write-Output "        OCR complete: $tiffs TIFs and $txts TXTs. $(. Get-TimeStamp)" | Tee-Object -file $log_batchCreate -Append
+
+        Write-Verbose "$(. Get-TimeStamp) [$object] Converting TIF to TXT using $ocrengine. Item-level TXT will be saved in a transcripts subdirectory."
+        Write-Output "        OCR starting (TXT output)." | Tee-Object -file $log_batchCreate -Append
+        if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
+        if ($ocrengine -eq "ABBYY") {
+            & Convert-to-Text-ABBYY -path $path -object $object -throttle $throttle -log $log_batchCreate
         }
-        else { }
+        elseif ($ocrengine -eq "tesseract") {
+            & Convert-to-Text -path $path -object $object -throttle $throttle -log $log_batchCreate -gm $gm -tesseract $tesseract
+        }
+        Get-ChildItem -Path $path\$object\transcripts *.txt -Recurse | ForEach-Object {
+            & Optimize-OCR -ocrText $_.FullName | Out-Null
+        }
+        $tiffs = (Get-ChildItem *.tif* -Path $path\$object  -Recurse).Count
+        $txts = (Get-ChildItem *.txt -Path $path\$object\transcripts -Recurse).Count
+        Write-Output "        OCR complete: $tiffs TIFs and $txts TXTs. $(. Get-TimeStamp)" | Tee-Object -file $log_batchCreate -Append
+
     }
     elseif ($ocr -eq "pdf") {
-        if (!($record.Level -eq "Item")) {
-            Write-Verbose "$(. Get-TimeStamp) [$object] Converting TIF to PDF using $ocrengine. Object-level PDF will be saved in the object directory."
-            Write-Output "        OCR starting (PDF output)." | Tee-Object -file $log_batchCreate -Append
+        Write-Verbose "$(. Get-TimeStamp) [$object] Converting TIF to PDF using $ocrengine. Object-level PDF will be saved in the object directory."
+        Write-Output "        OCR starting (PDF output)." | Tee-Object -file $log_batchCreate -Append
 
-            if ($ocrengine -eq "ABBYY") {
-                & Convert-to-PDF-ABBYY -path $path -object $object -throttle $throttle -log $log_batchCreate
-            }
-            elseif ($ocrengine -eq "tesseract") {
-                if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
-                & Convert-to-PDF -path $path -object $object -throttle $throttle -log $log_batchCreate  -tesseract $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
-                & Merge-PDF -path $path -object $object -pdfs transcripts -log $log_batchCreate -gs $gs
-                Remove-Item $path\$object\transcripts -Recurse | Tee-Object -file $log_batchCreate -Append
-            }
-            $pdfs = (Get-ChildItem *.pdf -Path $path\$object  -Recurse).Count
-            Write-Output "        OCR complete: $tiffs TIFs and $pdfs PDF. $(. Get-TimeStamp)" | Tee-Object -file $log_batchCreate -Append
+        if ($ocrengine -eq "ABBYY") {
+            & Convert-to-PDF-ABBYY -path $path -object $object -throttle $throttle -log $log_batchCreate
         }
-        else { }
+        elseif ($ocrengine -eq "tesseract") {
+            if (!(Test-Path $path\$object\transcripts)) { New-Item -ItemType Directory -Path $path\$object\transcripts | Out-Null }
+            & Convert-to-PDF -path $path -object $object -throttle $throttle -log $log_batchCreate  -tesseract $tesseract 2>&1 | Tee-Object -file $log_batchCreate -Append
+            & Merge-PDF -path $path -object $object -pdfs transcripts -log $log_batchCreate -gs $gs
+            Remove-Item $path\$object\transcripts -Recurse | Tee-Object -file $log_batchCreate -Append
+        }
+        $pdfs = (Get-ChildItem *.pdf -Path $path\$object  -Recurse).Count
+        Write-Output "        OCR complete: $tiffs TIFs and $pdfs PDF. $(. Get-TimeStamp)" | Tee-Object -file $log_batchCreate -Append
     }
     elseif ($ocr -eq "extract") {
         if (!($record.Level -eq "Item")) {
@@ -332,7 +330,7 @@ ForEach ($record in $csv) {
             Remove-Item $_.FullName | Out-Null
         }
         # Move any unreduced originals back to the object directory and delete the originals directory
-        if (Test-Path $path\$object\originals) { 
+        if (Test-Path $path\$object\originals) {
             Get-ChildItem -Path $path\$object\originals | ForEach-Object { Move-Item $_.FullName -Destination $path\$object\ }
             Remove-Item -Path $path\$object\originals | Out-Null
         }
@@ -363,8 +361,10 @@ ForEach ($record in $csv) {
     Write-Output "$(. Get-TimeStamp) Completed $object." | Tee-Object -file $log_batchCreate -Append
 }
 
+Remove-Item -Path $path\itemMetadata.txt | Out-Null
+
 # Cleanup files
-$headers = $csv | Get-member -MemberType 'NoteProperty' | Select-Object -ExpandProperty 'Name'
+<# $headers = $csv | Get-member -MemberType 'NoteProperty' | Select-Object -ExpandProperty 'Name'
 if ("Level" -in $headers) {
     if (($csv.Level | Get-Unique).Count -gt 1) {
         Write-Output "$(. Get-TimeStamp) Grouping items and objects for easier loading."
@@ -393,7 +393,7 @@ if ("Level" -in $headers) {
     if (($($csv.Level | Get-Unique).Count -le 1) -and ($csv.Level -eq "Object")) {
         Remove-Item -Path $path\itemMetadata.txt | Out-Null
     }
-}
+} #>
 
 $end = Get-Date
 $runtime = New-TimeSpan -Start $start -End $end
@@ -403,8 +403,8 @@ Write-Output "$(. Get-TimeStamp) CONTENTdm Tools Batch Create Complete." | Tee-O
 Write-Output "Total Elapsed Time:`t`t`t$runtime"
 Write-Output "Batch Location:`t`t`t`t$path" | Tee-Object -file $log_batchCreate -Append
 Write-Output "Batch Log:`t`t`t`t$log_batchCreate" | Tee-Object -file $log_batchCreate -Append
-Write-Output "Number of resources in $($metadata):`t$($csv.Count)" | Tee-Object -file $log_batchCreate -Append
-Write-Output "Number of resources processed:`t`t$o" | Tee-Object -file $log_batchCreate -Append
+Write-Output "Number of objects in $($metadata):`t$($objects.Count)" | Tee-Object -file $log_batchCreate -Append
+Write-Output "Number of objects processed:`t`t$o" | Tee-Object -file $log_batchCreate -Append
 Write-Output "---------------------------------------------" | Tee-Object -file $log_batchCreate -Append
 if ((($($csv.Count) -ne $o) -or ($($csv.Count) -ne $cdmt_rootCount) -or ($cdmt_rootCount -ne $o))) {
     Write-Warning "Warning: Check the above report and log, there is a missmatch in the final numbers." | Tee-Object -file $log_batchCreate -Append
