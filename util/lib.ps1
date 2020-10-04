@@ -1287,7 +1287,7 @@ function Convert-to-JP2 {
 
     $out = "$path\$object\scans"
 
-    $files | ForEach-Object -Parallel {
+    $files | ForEach-Object  -ThrottleLimit $throttle -Parallel {
         $basefilename = $_.Basename
         $fullfilename = $_.Fullname
         $sourceICC = "$fullfilename.icc"
@@ -1456,7 +1456,7 @@ function Copy-TIF-ABBYY {
     Get-ChildItem -Path $path\$object -Filter *.tif* | ForEach-Object -Parallel  {
         Copy-Item -Path $_.FullName -Destination $using:abbyy_staging\$using:object  2>&1 | Tee-Object -file $using:log -Append
     }
-    Write-Verbose "Copy-TIF-ABBYY complete for $using:object"
+    Write-Verbose "Copy-TIF-ABBYY complete for $object"
 }
 
 function Update-OCR {

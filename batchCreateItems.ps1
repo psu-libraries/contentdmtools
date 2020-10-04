@@ -1,10 +1,9 @@
-# batchCreateCompoundObjects.ps1
-#Requires -Version 7
+# batchCreateItems.ps1
 <#
     .SYNOPSIS
-    Parallel process a batch of directories containing TIF images (one directory per object) and a metadata CSV describing each object, into Directory Structure, Document Type, Compound-Objects for CONTENTdm.
+    Parallel process a directory containing TIF images (one image per item) and a metadata CSV describing each item, into a CONTENTdm multi-item batch that can be imported with a tab-delimted text file of metadata.
     .DESCRIPTION
-    Process metadata CSV into compound-object with tab-d metadata files in directory structure. Complete series of actions for every object: Convert TIFs to JP2, organize existing JP2s or skip JP2 step. Convert TIF to TXT, PDF, or TXT and PDF; alternatively, extract text from an existing PDF; optimimize TXT and PDF outputs. Append item-level metadata tab-d item or compound-object metadata file. Organize or discard TIF files. REQUIRES POWERSHELL 7+, will not work with Windows Powershell due to use of parallel objects.
+    Process metadata CSV into tab-d item metadata file in directory structure. Complete series of actions for every object: Convert TIFs to JP2, organize existing JP2s or skip JP2 step. Convert TIF to TXT, PDF, or TXT and PDF; alternatively, extract text from an existing PDF; optimimize TXT and PDF outputs. Append item-level metadata. Organize or discard TIF files.
     .PARAMETER path
     The filepath to the root directory for a batch of objects.
     .PARAMETER metadata
@@ -122,10 +121,11 @@ ForEach ($record in $csv) {
 }
 
 ForEach ($object in $objects) {
+    #$object = "$($object.Directory)"
     $o++
     $percent = ($o / $objects.Count) * 100
-    Write-Progress -Activity "Batch Create Compound Objects" -Status "Processing objects in $metadata"  -CurrentOperation "Processing $object, $o of $($objects.Count)" -PercentComplete $percent
-    Write-Output "$(. Get-TimeStamp) Starting $object ($o of $($objects.Count) objects)." | Tee-Object -file $log_batchCreate -Append
+    Write-Progress -Activity "Batch Create" -Status "Processing objects in $metadata"  -CurrentOperation "Processing $object, $o of $($objects.Count)" -PercentComplete $percent
+    Write-Output "$(. Get-TimeStamp) Starting $object ($o of $($objects.Count) resources)." | Tee-Object -file $log_batchCreate -Append
 
     Write-Verbose "$(. Get-TimeStamp) [$object] Check for the presence of redacted TIF files and separate according to value of originals parameter."
     $redacted = & Find-Redacted-Filesets -path $path\$object
@@ -209,10 +209,27 @@ ForEach ($object in $objects) {
         Write-Verbose "$(. Get-TimeStamp) [$object] JP2 processing set to skip."
     }
 
-
-
-
-
+    <#     # Append item metadata to metadata.txt
+    if ($record.Level -eq "Item") {
+        Write-Verbose "$(. Get-TimeStamp) [$object] Update tab-d item metadata file with JP2 file name of each item."
+        Write-Output "        Deriving item file names and adding to tab-d item metadata file." | Tee-Object -file $log_batchCreate -Append
+        $recordDir = $record.Directory
+        if ($record -eq $csv[0]) {
+            $itemdata = Import-Csv -Path $path\itemMetadata.txt -Delimiter `t
+        }
+        elseif (!($record -eq $csv[0])) {
+            $itemdata = Import-Csv -Path $path\items\metadata.txt -Delimiter `t
+        }
+        $itemDir = $itemdata.Directory
+        $match = [array]::IndexOf($itemDir, $recordDir)
+        $itemdata[$match]."File Name" = (Get-ChildItem -Path $path\items -Filter "$recordDir*")
+        $itemdata | Export-Csv $path\items\metadata.txt -Delimiter `t -NoTypeInformation
+    }
+    else {
+        Write-Verbose "$(. Get-TimeStamp) [$object] Scan JP2s in object directory and derive item-level metadata, appending it to tab-d compound object metadata file."
+        Write-Output "        Deriving item-level metadata and adding it to the tab-d compound-object object metadata file." | Tee-Object -file $log_batchCreate -Append
+        & Convert-Item-Metadata -path $path -object $object | Tee-Object -file $log_batchCreate -Append
+    } #>
 
     # OCR, TXT and PDF
     if ($ocr -eq "both") {
@@ -343,18 +360,42 @@ ForEach ($object in $objects) {
         }
     }
 
-    if ($items.count -eq 0) {
-        # Append item metadata to metadata.txt
-        Write-Verbose "$(. Get-TimeStamp) [$object] Scan JP2s in object directory and derive item-level metadata, appending it to tab-d compound object metadata file."
-        Write-Output "        Deriving item-level metadata and adding it to the tab-d compound-object object metadata file." | Tee-Object -file $log_batchCreate -Append
-        & Convert-Item-Metadata -path $path -object $object | Tee-Object -file $log_batchCreate -Append
-    }
-
     Write-Output "$(. Get-TimeStamp) Completed $object." | Tee-Object -file $log_batchCreate -Append
 }
 
-# Remove temporary file
 Remove-Item -Path $path\itemMetadata.txt | Out-Null
+
+# Cleanup files
+<# $headers = $csv | Get-member -MemberType 'NoteProperty' | Select-Object -ExpandProperty 'Name'
+if ("Level" -in $headers) {
+    if (($csv.Level | Get-Unique).Count -gt 1) {
+        Write-Output "$(. Get-TimeStamp) Grouping items and objects for easier loading."
+        Write-Output "Items($($items.count)): $items`nCompound Objects($($objects.count)): $objects"
+        foreach ($item in $items) {
+            Remove-Item -Path $path\$item -Recurse -Force | Out-Null
+        }
+        Remove-Item -Path $path\itemMetadata.txt | Out-Null
+        $itemdata = import-csv $path\items\metadata.txt -Delimiter `t
+        $itemdata | Select-Object * -ExcludeProperty Directory | Export-Csv $path\items\metadata.txt -Delimiter `t -NoTypeInformation
+        foreach ($entry in $objects) {
+            if (!(Test-Path $path\objects)) { New-Item -ItemType Directory -Path $path\objects | Out-Null }
+            Move-Item -Path $path\$entry -Destination $path\objects\$entry
+        }
+    }
+    if (($($csv.Level | Get-Unique).Count -le 1) -and ($csv.Level -eq "Item")) {
+        foreach ($item in $items) {
+            Remove-Item -Path $path\$item -Recurse -Force | Out-Null
+        }
+        Remove-Item -Path $path\itemMetadata.txt | Out-Null
+        $itemdata = import-csv $path\items\metadata.txt -Delimiter `t
+        $itemdata | Select-Object * -ExcludeProperty Directory | Export-Csv $path\items\metadata.txt -Delimiter `t -NoTypeInformation
+        Move-Item $path\items\* $path\ | Out-Null
+        Remove-Item $path\items | Out-Null
+    }
+    if (($($csv.Level | Get-Unique).Count -le 1) -and ($csv.Level -eq "Object")) {
+        Remove-Item -Path $path\itemMetadata.txt | Out-Null
+    }
+} #>
 
 $end = Get-Date
 $runtime = New-TimeSpan -Start $start -End $end
