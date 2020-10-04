@@ -1,4 +1,5 @@
 # batchCreateItems.ps1
+#Requires -Version 7
 <#
     .SYNOPSIS
     Parallel process a directory containing TIF images (one image per item) and a metadata CSV describing each item, into a CONTENTdm multi-item batch that can be imported with a tab-delimted text file of metadata.
