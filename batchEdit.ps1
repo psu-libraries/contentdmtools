@@ -142,7 +142,7 @@ ForEach ($record in $metadata) {
     $SOAPRequest += "`t<soapenv:Body>`r`n"
     $SOAPRequest += "`t`t<v6:processCONTENTdm>`r`n"
     $SOAPRequest += "`t`t`t<action>edit</action>`r`n"
-    $SOAPRequest += "`t`t`t<cdmurl>http://server17287.contentdm.oclc.org:8888</cdmurl>`r`n"
+    $SOAPRequest += "`t`t`t<cdmurl>$server</cdmurl>`r`n"
     $SOAPRequest += "`t`t`t<username>$user</username>`r`n"
     $SOAPRequest += "`t`t`t<password>$pw</password>`r`n"
     $SOAPRequest += "`t`t`t<license>$license</license>`r`n"
