@@ -45,7 +45,11 @@ Param (
 
     [Parameter(Mandatory)]
     [string]
-    $user = $(Throw "Use -user to specify the CONTENTdm user.")
+    $user = $(Throw "Use -user to specify the CONTENTdm user."),
+
+    [Parameter]
+    [string]
+    $password = $(Throw "Use -user to specify the CONTENTdm user.")
 )
 
 # Variables
@@ -81,7 +85,14 @@ if (Test-Path $cdmt_root\settings\org.csv) {
 
 Write-Verbose "Lookup stored user credentials, request if not available."
 # Check for stored user password, if not available get user input.
-$pw = $(. Get-User-Settings -user $user)
+if ($null -eq $(. Get-User-Settings -user $user)) {
+    $pw = $password
+}
+else{
+    $pw = $(. Get-User-Settings -user $user)
+}
+
+
 
 # Read in the metadata, add Level column to sort, lookup type, sort rows so Objects are first.
 Write-Verbose "Import $csv and read the headers."
